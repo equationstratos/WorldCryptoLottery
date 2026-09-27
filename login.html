@@ -3,61 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - Accès à votre compte</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .login-container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 100%; max-width: 450px; text-align: center; }
-        h1 { color: #333; margin-bottom: 8px; font-size: 28px; }
-        .subtitle { color: #666; margin-bottom: 30px; font-size: 18px; }
-        .recap { background-color: #fff3e0; padding: 20px; border-radius: 10px; margin-bottom: 30px; border: 2px solid #FF9800; font-size: 19px; color: #e68900; font-weight: bold; display: none; }
-        .recap.visible { display: block; }
-        .recap strong { color: #FF9800; font-size: 24px; }
-        form { margin-top: 20px; }
-        input[type="email"], input[type="password"] { width: 100%; padding: 14px; margin: 12px 0; border: 2px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        input:focus { border-color: #2196F3; outline: none; }
-        button { width: 100%; padding: 16px; font-size: 19px; background-color: #FF9800; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; font-weight: bold; }
-        button:hover { background-color: #e68900; }
-        .lien-inscription { margin-top: 30px; font-size: 16px; }
-        .lien-inscription a { color: #2196F3; text-decoration: none; font-weight: bold; }
-        .lien-inscription a:hover { text-decoration: underline; }
-        .retour { margin-top: 20px; font-size: 15px; }
-        .retour a { color: #666; text-decoration: none; }
-        .retour a:hover { text-decoration: underline; }
-        @media (max-width: 500px) { .login-container { padding: 30px 20px; } h1 { font-size: 24px; } }
-    </style>
+    <title>Connexion — World Crypto Lottery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <div class="login-container">
-        <h1>🔐 Connexion</h1>
-        <p class="subtitle">Accédez à votre compte et à votre tableau de bord</p>
+    <header class="site-header">
+        <a href="index.php" class="logo"><span class="logo-coin">₿</span> World<span class="accent">Crypto</span>Lottery</a>
+        <nav class="nav">
+            <a href="inscription.php" class="btn btn-gold">Créer un compte</a>
+        </nav>
+    </header>
 
-        <div class="recap" id="recap-grilles"></div>
+    <main class="auth-wrap">
+        <div class="card auth-card">
+            <h1>🔐 Connexion</h1>
+            <p class="subtitle">Accédez à votre compte et à votre tableau de bord</p>
 
-        <form id="login-form" action="process_login.php" method="POST">
-            <input type="hidden" name="grilles_json" id="grilles_json" value="">
-            <input type="hidden" name="montant_btc" id="montant_btc" value="0">
+            <div class="recap" id="recap-grilles"></div>
 
-            <input type="email" name="email" placeholder="Adresse email" required autocomplete="email">
-            <input type="password" name="password" placeholder="Mot de passe" required autocomplete="current-password">
+            <form id="login-form" action="process_login.php" method="POST">
+                <input type="hidden" name="grilles_json" id="grilles_json" value="">
+                <input type="hidden" name="montant_btc" id="montant_btc" value="0">
 
-            <button type="submit">Se connecter</button>
-        </form>
+                <div class="field">
+                    <label for="email">Adresse email</label>
+                    <input type="email" id="email" name="email" placeholder="vous@exemple.com" required autocomplete="email">
+                </div>
+                <div class="field">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
 
-        <div class="lien-inscription">
-            Pas encore de compte ? <a href="inscription.html">Créer un compte</a>
+                <button type="submit" class="btn btn-gold btn-block btn-lg">Se connecter</button>
+            </form>
+
+            <div class="auth-links">
+                Pas encore de compte ? <a href="inscription.php">Créer un compte</a>
+                <a href="index.php" class="retour">← Retour à la sélection de grilles</a>
+            </div>
         </div>
+    </main>
 
-        <div class="retour">
-            <a href="index.php">← Retour à la sélection de grilles</a>
-        </div>
-    </div>
+    <footer class="site-footer">
+        <span class="age">18+</span> Jeu réservé aux personnes majeures. Jouez de manière responsable.
+    </footer>
 
     <script>
         const recapDiv = document.getElementById('recap-grilles');
         const grillesInput = document.getElementById('grilles_json');
         const montantInput = document.getElementById('montant_btc');
 
-        const grillesStockees = localStorage.getItem('grillesAValider');
+        let grillesStockees = localStorage.getItem('grillesAValider');
+        try { JSON.parse(grillesStockees || '[]'); } catch (e) { grillesStockees = null; }
         const montantStocke = localStorage.getItem('montantTotalBTC');
 
         if (grillesStockees && grillesStockees !== '[]' && montantStocke && parseFloat(montantStocke) > 0) {
@@ -65,7 +65,7 @@
             const montant = parseFloat(montantStocke).toFixed(8);
 
             recapDiv.innerHTML = `
-                Vous avez <strong>${grilles.length}</strong> grille(s) prête(s) à valider<br><br>
+                Vous avez <strong>${grilles.length}</strong> grille(s) prête(s) à valider<br>
                 Montant total à payer : <strong>${montant} BTC</strong>
             `;
             recapDiv.classList.add('visible');
