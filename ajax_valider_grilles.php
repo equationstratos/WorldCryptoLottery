@@ -8,26 +8,14 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 require_once 'db_connect.php';
-
-$user_id = $_SESSION['user_id'];
-$input = json_decode(file_get_contents('php://input'), true);
-
-if (!is_array($input) || count($input) === 0) {
-    echo json_encode(['success' => false, 'message' => 'Aucune grille reçue.']);
-    exit();
-}
+require_once 'fonctions.php';
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO grilles (user_id, numeros, montant_btc, statut, date_creation) VALUES (?, ?, 0.00001000, 'en_attente', NOW())");
+    $count = enregistrerGrilles($pdo, (int) $_SESSION['user_id'], file_get_contents('php://input'));
 
-    $count = 0;
-    foreach ($input as $grille) {
-        if (is_array($grille) && count($grille) === 5) {
-            sort($grille, SORT_NUMERIC);
-            $numeros = implode(',', $grille);
-            $stmt->execute([$user_id, $numeros]);
-            $count++;
-        }
+    if ($count === 0) {
+        echo json_encode(['success' => false, 'message' => 'Aucune grille valide reçue.']);
+        exit();
     }
 
     echo json_encode([
@@ -38,4 +26,3 @@ try {
     error_log($e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Erreur serveur.']);
 }
-?>

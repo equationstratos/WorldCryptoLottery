@@ -19,3 +19,19 @@ CREATE TABLE IF NOT EXISTS `grilles` (
     `transaction_id` VARCHAR(100) NULL,
     FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tirages : date du tirage et cagnotte affichées sur la page d'accueil.
+-- cagnotte_initiale_btc : montant de départ (ex. report du tirage précédent)
+-- part_cagnotte : pourcentage du prix de chaque grille payée reversé dans la cagnotte
+CREATE TABLE IF NOT EXISTS `tirages` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `date_tirage` DATETIME NOT NULL,
+    `cagnotte_initiale_btc` DECIMAL(20,8) NOT NULL DEFAULT 0.00000000,
+    `part_cagnotte` DECIMAL(5,2) NOT NULL DEFAULT 80.00,
+    `numeros_gagnants` VARCHAR(50) NULL,
+    `statut` ENUM('a_venir', 'termine') DEFAULT 'a_venir',
+    INDEX (`statut`, `date_tirage`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Exemple : programmer le prochain tirage (à adapter)
+-- INSERT INTO `tirages` (`date_tirage`, `cagnotte_initiale_btc`) VALUES ('2026-10-03 21:00:00', 0.05000000);
