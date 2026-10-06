@@ -179,7 +179,7 @@ class Fighter {
     this.reset();
   }
   reset() {
-    this.x = this.side === 0 ? STAGE_W / 2 - 170 : STAGE_W / 2 + 170;
+    this.x = this.side === 0 ? STAGE_W / 2 - 150 : STAGE_W / 2 + 150;
     this.y = GROUND; this.vx = 0; this.vy = 0; this.face = this.side === 0 ? 1 : -1;
     this.hp = this.dispHp = 1000; this.st = 'idle'; this.t = 0; this.mv = null; this.amv = null;
     this.hist = []; this.buf = []; this.ghosts = []; this.flash = 0; this.inv = 0; this.combo = 0;
@@ -511,7 +511,7 @@ class Fighter {
       }
       case 'spin': {
         if (t < 6) return lerpPose(POSES.idle, POSES.jump, t / 6);
-        if (t < 44) return { ...POSES.spin, sx: Math.cos((t - 6) * 0.55) };
+        if (t < 44) return { ...POSES.spin, sx: Math.cos((t - 6) * 0.55), spin: (t - 6) * 0.55 };
         return POSES.jump;
       }
       case 'rush':
@@ -531,7 +531,7 @@ class Fighter {
       case 'storm':
         if (t < 6) return lerpPose(POSES.idle, POSES.crouch, t / 6);
         if (ch.move === 'flip') return { ...POSES.flip, rot: -((t - 6) * 22) % 360 };
-        return { ...POSES.upper, sx: Math.cos((t - 6) * 0.5) };
+        return { ...POSES.upper, sx: Math.cos((t - 6) * 0.5), spin: (t - 6) * 0.5 };
       case 'rush':
         if (t < 10) return lerpPose(POSES.idle, POSES.rushWind, easeOut(t / 10));
         if (t < 36) return POSES.rush;

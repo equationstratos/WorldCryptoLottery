@@ -2,7 +2,7 @@
 /* =========================================================
    ROBOT FIGHTER II — core : canvas, utilitaires, entrées, audio
    ========================================================= */
-const W = 960, H = 540, GROUND = 470, STAGE_W = 1600;
+const W = 960, H = 540, GROUND = 470, STAGE_W = 1300;
 const D2R = Math.PI / 180;
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');

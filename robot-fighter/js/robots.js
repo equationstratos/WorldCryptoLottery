@@ -10,11 +10,11 @@ const ROSTER = [
     move: 'uppercut', moveName: 'RISING DYNAMO', sup: 'beam', supName: 'GIGA PLASMA CANNON',
     bio: 'Le robot humanoïde de Tesla. Mains à 22 degrés de liberté, précision chirurgicale.' },
   { id: 'atlas', name: 'ATLAS', full: 'Atlas électrique', maker: 'BOSTON DYNAMICS', country: 'USA', year: 2024,
-    body: '#c7cad0', trim: '#4b4f57', joint: '#24262b', accent: '#ffd23a', visor: '#101114', head: 'atlas',
+    body: '#bfc4cb', trim: '#5e636b', joint: '#1c1d21', accent: '#ffb43a', visor: '#08090b', head: 'atlas', metal: true,
     scale: 1.03, leg: 1.0, bulk: 1.15, chest: 1.12, speed: 0.95, power: 1.12, stage: 3,
-    proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ffd23a', core: '#fffbe0' },
+    proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ffb43a', core: '#fff3d6' },
     move: 'flip', moveName: 'PARKOUR FLIP', sup: 'storm', supName: 'BACKFLIP TEMPEST',
-    bio: 'Le maître du parkour. Saltos arrière et articulations à 360°.' },
+    bio: 'Le nouvel Atlas 100 % électrique. Aluminium, tête à anneau lumineux et articulations à 360°.' },
   { id: 'figure', name: 'FIGURE 02', full: 'Figure 02', maker: 'FIGURE AI', country: 'USA', year: 2024,
     body: '#2a2c31', trim: '#111215', joint: '#3a3d44', accent: '#9be7ff', visor: '#030304', head: 'figure',
     scale: 1.0, leg: 1.02, bulk: 0.98, chest: 1.0, speed: 1.08, power: 0.96, stage: 0,
@@ -395,6 +395,7 @@ function portrait(ch, size = 120, flip = false) {
   c.fillStyle = g; c.fillRect(0, 0, size, size);
   c.strokeStyle = hexA(ch.accent, 0.25); c.lineWidth = 1;
   for (let i = -size; i < size * 2; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i - size, size); c.stroke(); }
+  if (typeof R3 !== 'undefined' && R3) { c.drawImage(R3.headShot(ch, size, flip ? -1 : 1, 0.62), 0, size * 0.04); PORTRAIT_CACHE[key] = cv; return cv; }
   const sc = size / 70;
   const pose = mkPose({ ...POSES.idle, lean: 4, hd: -6, fs: 20, fe: 30, bs: 15, be: 30 });
   const face = flip ? -1 : 1;
@@ -402,4 +403,15 @@ function portrait(ch, size = 120, flip = false) {
   drawRobot(c, ch, pose, size / 2 - P.head.x * 0.9, size * 0.42 - P.head.y, face, sc);
   PORTRAIT_CACHE[key] = cv;
   return cv;
+}
+
+// tête détourée (HUD)
+const HEAD_CACHE = {};
+function headShot(ch, size, face = 1) {
+  const key = ch.id + size + face;
+  if (HEAD_CACHE[key]) return HEAD_CACHE[key];
+  let cv;
+  if (typeof R3 !== 'undefined' && R3) cv = R3.headShot(ch, size, face);
+  else cv = portrait(ch, size, face < 0);
+  return (HEAD_CACHE[key] = cv);
 }
