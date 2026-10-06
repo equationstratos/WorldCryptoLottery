@@ -20,18 +20,18 @@ const R3 = (function () {
   const HF = 2 * Math.max(PY, H - PY);
   const TANH = Math.tan(FOV / 2 * D2R);
   const PLATES = [
-    { img: 'assets/lab.jpg', name: 'LABORATOIRE NÉON', hemi: [0x7a96ff, 0x0c0d18, 1.0], key: [0xe4ecff, 2.0],
-      rims: [[0x2a7bff, 3.2, [0, -0.4, -1]], [0xff2a3a, 2.2, [-1, 0.2, -0.6]], [0xff2a3a, 2.2, [1, 0.2, -0.6]]] },
-    { img: 'assets/warehouse.jpg', name: 'ENTREPÔT ARCADE', hemi: [0xa8b2d8, 0x2a2024, 1.0], key: [0xfff0e2, 2.1],
-      rims: [[0xff3fd2, 2.8, [1, 0.3, -0.7]], [0x29e6ff, 2.8, [-1, 0.3, -0.7]], [0xffc070, 0.8, [0, 1, 0.3]]] }
+    { img: 'assets/lab.jpg', name: 'LABORATOIRE NÉON', hemi: [0x7a96ff, 0x0c0d18, 0.45], key: [0xe4ecff, 1.3],
+      rims: [[0x2a7bff, 1.8, [0, -0.4, -1]], [0xff2a3a, 1.2, [-1, 0.2, -0.6]], [0xff2a3a, 1.2, [1, 0.2, -0.6]]] },
+    { img: 'assets/warehouse.jpg', name: 'ENTREPÔT ARCADE', hemi: [0xa8b2d8, 0x2a2024, 0.45], key: [0xfff0e2, 1.35],
+      rims: [[0xff3fd2, 1.5, [1, 0.3, -0.7]], [0x29e6ff, 1.5, [-1, 0.3, -0.7]], [0xffc070, 0.4, [0, 1, 0.3]]] }
   ];
 
   /* ---------------- matériaux ---------------- */
   function mats(ch) {
-    const env = 0.7;
+    const env = 0.4;
     return {
       shell: ch.metal
-        ? new T.MeshPhysicalMaterial({ color: ch.body, roughness: 0.3, metalness: 0.92, clearcoat: 0.25, clearcoatRoughness: 0.3, envMapIntensity: 1.25 })
+        ? new T.MeshPhysicalMaterial({ color: ch.body, roughness: 0.3, metalness: 0.92, clearcoat: 0.25, clearcoatRoughness: 0.3, envMapIntensity: 0.8 })
         : new T.MeshPhysicalMaterial({ color: ch.body, roughness: 0.28, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: env }),
       rubber: new T.MeshPhysicalMaterial({ color: 0x18191c, roughness: 0.62, metalness: 0.1, envMapIntensity: 0.5 }),
       panel: new T.MeshPhysicalMaterial({ color: 0x6d7178, roughness: 0.45, metalness: 0.35, clearcoat: 0.4, envMapIntensity: 0.8 }),
@@ -171,6 +171,7 @@ const R3 = (function () {
     P.torso = torso;
     P.neck = new T.Mesh(G(k + 'nk', () => new T.CylinderGeometry(6 * s, 7 * s, L.nk, 12).translate(0, L.nk / 2, 0)), M.dark);
     P.head = buildHead(ch, s, M);
+    if (ch.id === 'atlas') P.head.children.forEach(m => { m.position.multiplyScalar(0.85); m.scale.multiplyScalar(0.85); });
     for (const n in P) root.add(P[n]);
     root.traverse(o => { if (o.isMesh) { o.castShadow = !override; o.frustumCulled = false; } });
     return { root, P, M, ch };
@@ -264,7 +265,7 @@ const R3 = (function () {
 
   const composer = new T.EffectComposer(fightR);
   composer.addPass(new T.RenderPass(scene, camera));
-  const bloom = new T.UnrealBloomPass(new T.Vector2(480, 270), 0.6, 0.45, 1.0);
+  const bloom = new T.UnrealBloomPass(new T.Vector2(480, 270), 0.5, 0.4, 1.0);
   composer.addPass(bloom);
   composer.addPass(new T.OutputPass());
 
@@ -278,7 +279,7 @@ const R3 = (function () {
     rims.forEach((l, j) => { const r = c.rims[j]; l.color.set(r[0]); l.intensity = r[1]; l.userData.dir = r[2]; });
   }
   function resize() {
-    const w = Math.min(canvas.width, 1920), h = Math.round(w * H / W);
+    const w = Math.min(canvas.width, isTouch ? 1100 : 1920), h = Math.round(w * H / W);
     const kk = w + 'x' + h; if (kk === sizeKey) return; sizeKey = kk;
     fightR.setPixelRatio(1); fightR.setSize(w, h, false); composer.setSize(w, h);
     bloom.resolution.set(w / 2, h / 2);
@@ -322,11 +323,11 @@ const R3 = (function () {
         g.root.visible = !!gh;
         if (gh) { poseRobot(g, gh.pose, gh.x, gh.hy, gh.face); g.M.shell.opacity = gh.a * 0.45; }
       });
-      if (f.st === 'super' || (F.superFreeze > 0 && F.superBy === f)) { const hp = f.wp('fha'); light(hp.x, hp.y, f.ch.accent, 9e4); }
-      else if (f.st === 'special' && f.ghostOn) { const hp = f.wp(f.sp === 'flip' || f.sp === 'spin' ? 'ffo' : 'fha'); light(hp.x, hp.y, f.ch.accent, 5e4); }
-      if (f.beam) light(f.beam.x + f.face * 160, f.beam.y, f.ch.accent, 2e5);
+      if (f.st === 'super' || (F.superFreeze > 0 && F.superBy === f)) { const hp = f.wp('fha'); light(hp.x, hp.y, f.ch.accent, 2.5e4); }
+      else if (f.st === 'special' && f.ghostOn) { const hp = f.wp(f.sp === 'flip' || f.sp === 'spin' ? 'ffo' : 'fha'); light(hp.x, hp.y, f.ch.accent, 1.8e4); }
+      if (f.beam) light(f.beam.x + f.face * 160, f.beam.y, f.ch.accent, 6e4);
     }
-    for (const pr of F.projs) light(pr.x, pr.y, pr.col, 6e4);
+    for (const pr of F.projs) light(pr.x, pr.y, pr.col, 2.2e4);
     for (; li < fxLights.length; li++) fxLights[li].intensity = 0;
     composer.render();
     return fightR.domElement;

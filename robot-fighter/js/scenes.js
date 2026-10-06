@@ -361,8 +361,8 @@ class Fight {
     // portrait géant
     c.save(); c.beginPath(); c.rect(0, 0, W, h); c.clip();
     const px = left ? lerp(-200, 210, inK) : lerp(W + 200, W - 210, inK);
-    const pose = mkPose({ ...POSES.idle, lean: 6, fs: 160, fe: 20, hd: -8 });
-    drawRobotAny(c, f.ch, pose, px, h * 1.75, left ? 1 : -1, 2.6);
+    const pose = mkPose({ ...POSES.idle, lean: 6, hd: -8 });
+    drawRobotAny(c, f.ch, pose, px, 40 + 190 * 1.9 * f.ch.scale, left ? 1 : -1, 1.9);
     c.restore();
     c.restore();
     c.save(); c.globalAlpha = k;

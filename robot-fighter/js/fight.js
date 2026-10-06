@@ -90,10 +90,10 @@ function hitSpark(x, y, lvl, col, dir, blocked) {
     FX.add({ type: 'glow', x, y, size: 34, life: 8, max: 8, col: '#4aa8ff' });
     return;
   }
-  const n = 8 + lvl * 6;
-  FX.add({ type: 'star', x, y, size: 30 + lvl * 14, life: 9, max: 9, col: lvl >= 3 ? col : '#fff6c0', rot: rand(0, 3) });
-  FX.add({ type: 'glow', x, y, size: 40 + lvl * 20, life: 12, max: 12, col: lvl >= 3 ? col : '#ffb02e', core: '#fff' });
-  FX.add({ type: 'ring', x, y, size: 50 + lvl * 25, life: 14, max: 14, col: '#fff', lw: 4 + lvl * 2 });
+  const n = 8 + lvl * 6, zk = 1 / Math.sqrt(typeof ZOOM === 'number' ? ZOOM : 1);
+  FX.add({ type: 'star', x, y, size: (30 + lvl * 14) * zk, life: 9, max: 9, col: lvl >= 3 ? col : '#fff6c0', rot: rand(0, 3) });
+  FX.add({ type: 'glow', x, y, size: (40 + lvl * 20) * zk, life: 12, max: 12, col: lvl >= 3 ? col : '#ffb02e', core: '#fff' });
+  FX.add({ type: 'ring', x, y, size: (50 + lvl * 25) * zk, life: 14, max: 14, col: '#fff', lw: 4 + lvl * 2 });
   for (let i = 0; i < n; i++) {
     const a = rand(-1.2, 1.2) + (dir > 0 ? 0 : Math.PI), v = rand(5, 10 + lvl * 4);
     FX.add({ type: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, g: 0.35, drag: 0.94, life: rand(12, 26) | 0, max: 26, size: 3, col: pick(['#fff3a0', '#ffc23a', '#ff8a1c', col]), len: 2.5 });
