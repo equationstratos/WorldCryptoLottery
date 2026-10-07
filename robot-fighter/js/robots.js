@@ -29,7 +29,7 @@ const ROSTER = [
     bio: 'La légende japonaise, pionnier des robots marcheurs depuis 2000.' },
   { id: 'h1', name: 'UNITREE H1', full: 'H1', maker: 'UNITREE', country: 'CHINE', year: 2023,
     body: '#3a3d44', trim: '#1a1b1f', joint: '#5a5e66', accent: '#4dff88', visor: '#050506', head: 'h1',
-    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
+    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 5,
     proj: { name: 'VOLT SPHERE', style: 'orb', color: '#4dff88', core: '#eafff1' },
     move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Détenteur du record de vitesse des humanoïdes : 3,3 m/s.' },
@@ -47,13 +47,13 @@ const ROSTER = [
     bio: 'Jambes d\'autruche, genoux inversés. Le roi de l\'entrepôt.' },
   { id: 't800', name: 'T800', full: 'EngineAI T800 (REK)', maker: 'ENGINEAI · REK', country: 'CHINE', year: 2025,
     body: '#e9ebee', trim: '#5d6168', joint: '#3c3f45', accent: '#4aa8ff', visor: '#101216', head: 'figure', kicker: true,
-    scale: 1.06, leg: 1.04, bulk: 1.06, chest: 1.06, speed: 1.0, power: 1.18, stage: 1,
+    scale: 1.06, leg: 1.04, bulk: 1.06, chest: 1.06, speed: 1.0, power: 1.18, stage: 6,
     proj: { name: 'CORE BLAST', style: 'orb', color: '#4aa8ff', core: '#e6f3ff' },
     move: 'spin', moveName: 'CYCLONE KICK', sup: 'storm', supName: 'DÉCAPITATEUR', throwType: 'takedown', throwName: 'OCTAGON SLAM',
     bio: 'Le poids lourd d\'EngineAI : 1,85 m, 85 kg, 41 articulations, 450 N·m. Star des combats REK, ses coups de pied ont décapité un androïde.' },
   { id: 'apollo', name: 'APOLLO', full: 'Apollo', maker: 'APPTRONIK', country: 'USA', year: 2023,
     body: '#e9e6df', trim: '#2c2f36', joint: '#3e424a', accent: '#ff6a2b', visor: '#121419', head: 'apollo',
-    scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 3,
+    scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 4,
     proj: { name: 'IGNITION ORB', style: 'orb', color: '#ff6a2b', core: '#fff0e0' },
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' }
@@ -428,10 +428,30 @@ function drawHead(c, ch, s, pal, out, opt = {}) {
   noGlow();
 }
 
+/* ---------- skins (variantes de couleurs / thèmes) ----------
+   ch.skins = [{ id, name, ch?: {accent, proj, body, ...} }, ...] — le premier est le skin d'origine.
+   withSkin(ch, idOuIndex) → personnage dérivé (même id, key = id#skin), mis en cache ; le modèle 3D lit ch.skin.
+   'mirror' : pour un combat miroir, skin suivant si le robot en a, sinon teinte automatique. */
+const SKIN_CACHE = {};
+function skinList(ch) { return (ch.base || ch).skins || [{ id: 'classic', name: 'ORIGINAL' }]; }
+function withSkin(ch, s) {
+  const base = ch.base || ch, list = skinList(base);
+  if (s === 'mirror') {
+    if (list.length > 1) return withSkin(base, (list.findIndex(x => x.id === (ch.skin || list[0].id)) + 1) % list.length);
+    const key = base.id + '#mirror';
+    return SKIN_CACHE[key] || (SKIN_CACHE[key] = Object.assign({}, base, { base, key, skin: 'mirror', skinName: 'MIROIR', tint: '#ffb070', accent: shade(base.accent, 0.25) }));
+  }
+  const sk = typeof s === 'number' ? list[((s % list.length) + list.length) % list.length] : (list.find(x => x.id === s) || list[0]);
+  if (sk === list[0]) return base;
+  const key = base.id + '#' + sk.id;
+  return SKIN_CACHE[key] || (SKIN_CACHE[key] = Object.assign({}, base, sk.ch || {}, { base, key, skin: sk.id, skinName: sk.name }));
+}
+const chKey = ch => ch.key || ch.id;
+
 /* ---------- portraits (cache) ---------- */
 const PORTRAIT_CACHE = {};
 function portrait(ch, size = 120, flip = false) {
-  const key = ch.id + size + flip;
+  const key = chKey(ch) + size + flip;
   if (PORTRAIT_CACHE[key]) return PORTRAIT_CACHE[key];
   const cv = document.createElement('canvas'); cv.width = cv.height = size;
   const c = cv.getContext('2d');
@@ -453,7 +473,7 @@ function portrait(ch, size = 120, flip = false) {
 // tête détourée (HUD)
 const HEAD_CACHE = {};
 function headShot(ch, size, face = 1) {
-  const key = ch.id + size + face;
+  const key = chKey(ch) + size + face;
   if (HEAD_CACHE[key]) return HEAD_CACHE[key];
   let cv;
   if (typeof R3 !== 'undefined' && R3) cv = R3.headShot(ch, size, face);
