@@ -29,7 +29,7 @@ const ROSTER = [
     bio: 'La légende japonaise, pionnier des robots marcheurs depuis 2000.' },
   { id: 'h1', name: 'UNITREE H1', full: 'H1', maker: 'UNITREE', country: 'CHINE', year: 2023,
     body: '#3a3d44', trim: '#1a1b1f', joint: '#5a5e66', accent: '#4dff88', visor: '#050506', head: 'h1',
-    scale: 1.06, leg: 1.08, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
+    scale: 1.15, leg: 0.85, bulk: 0.9, chest: 0.92, speed: 1.15, power: 0.95, stage: 2,
     proj: { name: 'VOLT SPHERE', style: 'orb', color: '#4dff88', core: '#eafff1' },
     move: 'rush', moveName: 'SPEED RECORD', sup: 'rush', supName: 'HYPERSPEED BARRAGE', throwType: 'takedown', throwName: 'DOUBLE-LEG SLAM',
     bio: 'Détenteur du record de vitesse des humanoïdes : 3,3 m/s.' },
