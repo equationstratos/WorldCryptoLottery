@@ -259,9 +259,9 @@ class Fight {
   cinematic() {
     const sb = this.superFreeze > 0 ? this.superBy : null;
     const mid = (this.p[0].x + this.p[1].x) / 2;
-    if (sb) { const k = easeOut(clamp((62 - this.superFreeze) / 10, 0, 1)); return { zoom: 1.24, orbit: 0.17 * sb.face * k, roll: 0.035 * sb.face * k, lift: 0.05 * k, fx: sb.x, fy: sb.hipY - 40 }; }
+    if (sb) { const k = easeOut(clamp((62 - this.superFreeze) / 10, 0, 1)); return { zoom: 1.24, orbit: 0.13 * sb.face * k, roll: 0.03 * sb.face * k, lift: 0.025 * k, fx: sb.x, fy: sb.hipY - 40 }; }
     if (this.phase === 'ko' && this.phaseT < 110) { const l = this.p.find(f => f.ko) || this.p[0]; return { zoom: 1.14, orbit: -0.1 * l.face, roll: -0.02 * l.face, lift: 0.03, fx: l.x, fy: l.hipY - 30 }; }
-    if (this.phase === 'intro' && this.phaseT < 110) { const k = 1 - easeOut(clamp(this.phaseT / 110, 0, 1)); return { zoom: 1 + 0.12 * k, orbit: 0.16 * k, roll: 0, lift: 0.04 * k, fx: mid, fy: GROUND - 100 }; }
+    if (this.phase === 'intro' && this.phaseT < 110) { const k = 1 - easeOut(clamp(this.phaseT / 110, 0, 1)); return { zoom: 1 + 0.12 * k, orbit: 0.11 * k, roll: 0, lift: 0.02 * k, fx: mid, fy: GROUND - 100 }; }
     return { zoom: 1, orbit: 0, roll: 0, lift: 0, fx: mid, fy: GROUND - 100 };
   }
   view() {

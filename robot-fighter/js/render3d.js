@@ -46,11 +46,23 @@ const R3 = (function () {
   const plate = new T.Mesh(new T.PlaneGeometry(1, 1), plateMat);
   {
     const Ld = D0 + DP, k = 2 * Ld * TANH / HF, camY0 = (GY - PY) / ZOOM;
-    const ph = 540 * k * 1.05, pw = ph * (1280 / 500);
+    const ph = 540 * k * 1.22, pw = ph * (1280 / 500);
     plate.scale.set(pw, ph, 1);
-    plate.position.set(STAGE_W / 2, camY0 + (PY - 270) * k, -DP);
+    plate.position.set(STAGE_W / 2, camY0 + (PY - 270) * k - 540 * k * 0.06, -DP);
   }
+  plate.renderOrder = -2;
   scene.add(plate);
+  // reflets des robots sur le sol brillant : robots en miroir rendus à part puis ajoutés au sol
+  const reflRT = new T.WebGLRenderTarget(480, 270);
+  const reflMat = new T.ShaderMaterial({
+    uniforms: { map: { value: reflRT.texture }, opacity: { value: 0.3 }, ground: { value: 0.1 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform sampler2D map; uniform float opacity; uniform float ground; varying vec2 vUv; void main(){ float d = ground - vUv.y; if (d < 0.0) discard; vec4 c = texture2D(map, vUv); float f = opacity * c.a * (1.0 - clamp(d / 0.42, 0.0, 1.0)); gl_FragColor = vec4(c.rgb * f, 1.0); }',
+    depthTest: false, depthWrite: false, blending: T.AdditiveBlending, transparent: false
+  });
+  const reflQuad = new T.Mesh(new T.PlaneGeometry(2, 2), reflMat);
+  reflQuad.frustumCulled = false; reflQuad.renderOrder = -1; scene.add(reflQuad);
+  const REFL_OP = [0.6, 0.32];
   const floor = new T.Mesh(new T.PlaneGeometry(6000, 3000), new T.ShadowMaterial({ opacity: 0.55 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
   const hemi = new T.HemisphereLight(0xffffff, 0x222222, 1); scene.add(hemi);
@@ -70,7 +82,7 @@ const R3 = (function () {
 
   let curStage = -1, sizeKey = '';
   // qualité adaptative : 0 = maximale, 1 = intermédiaire, 2 = économique (mobiles lents)
-  const QS = [{ res: 1, bloom: true, shadow: [2048, 1024] }, { res: 0.8, bloom: true, shadow: [1024, 512] }, { res: 0.62, bloom: false, shadow: [512, 256] }];
+  const QS = [{ res: 1, bloom: true, shadow: [2048, 1024], refl: 0.5 }, { res: 0.8, bloom: true, shadow: [1024, 512], refl: 0.33 }, { res: 0.62, bloom: false, shadow: [512, 256], refl: 0 }];
   const qParam = new URLSearchParams(location.search).get('q');
   let quality = qParam != null ? clamp(+qParam | 0, 0, 2) : 0, qLocked = qParam != null, ema = 16, emaN = 0, slowN = 0;
   function setQuality(q) {
@@ -100,8 +112,11 @@ const R3 = (function () {
     const kk = w + 'x' + h; if (kk === sizeKey) return; sizeKey = kk;
     fightR.setPixelRatio(1); fightR.setSize(w, h, false); composer.setSize(w, h);
     bloom.resolution.set(w / 2, h / 2);
+    const rr = QS[quality].refl;
+    if (rr) reflRT.setSize(Math.max(2, Math.round(w * rr)), Math.max(2, Math.round(h * rr)));
   }
   setQuality(quality);
+  const pv = new T.Vector3();
   const fighterModels = new Map(); // fighter -> {rb, ghosts[]}
   const ghostMat = {};
   function modelFor(f) {
@@ -154,11 +169,27 @@ const R3 = (function () {
     }
     for (const pr of F.projs) light(pr.x, pr.y, pr.col, 2.2e4);
     for (; li < fxLights.length; li++) fxLights[li].intensity = 0;
+    // passe de reflet
+    const rq = QS[quality].refl;
+    reflQuad.visible = !!rq;
+    if (rq) {
+      const roots = [];
+      for (const m of fighterModels.values()) { roots.push(m.rb.root); m.ghosts.forEach(g => g.root.visible && roots.push(g.root)); }
+      plate.visible = false; floor.visible = false; reflQuad.visible = false;
+      roots.forEach(r => { r.position.y = -r.position.y; r.scale.y = -r.scale.y; });
+      fightR.shadowMap.autoUpdate = false;
+      fightR.setRenderTarget(reflRT); fightR.setClearColor(0x000000, 0); fightR.clear(); fightR.render(scene, camera); fightR.setRenderTarget(null);
+      fightR.shadowMap.autoUpdate = true;
+      roots.forEach(r => { r.position.y = -r.position.y; r.scale.y = -r.scale.y; });
+      plate.visible = true; floor.visible = true; reflQuad.visible = true;
+      pv.set(v.cx, 0, 0).project(camera);
+      reflMat.uniforms.ground.value = (pv.y + 1) / 2;
+      reflMat.uniforms.opacity.value = REFL_OP[curStage] * dim;
+    }
     composer.render();
     return fightR.domElement;
   }
   // projection jeu → écran (pour aligner les effets 2D sur la 3D, même caméra inclinée)
-  const pv = new T.Vector3();
   function project(x, y) { pv.set(x, GROUND - y, 0).project(camera); return { x: (pv.x + 1) / 2 * W, y: (1 - pv.y) / 2 * H }; }
   function overlay(v) {
     const fx = v.fx != null ? v.fx : v.cx, fy = v.fy != null ? v.fy : GROUND - 100;
