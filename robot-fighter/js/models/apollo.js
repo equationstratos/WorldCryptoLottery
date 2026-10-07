@@ -142,6 +142,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.apollo = (function () {
     const DK = ctx.mat({ color: 0x1b1d22, roughness: 0.36, metalness: 0.55, clearcoat: 0.7, clearcoatRoughness: 0.25, envMapIntensity: 0.75 }); // graphite (articulations)
     const HB = ctx.mat({ color: 0x15161a, roughness: 0.5, metalness: 0.15, clearcoat: 0.45, clearcoatRoughness: 0.35, envMapIntensity: 0.6 });  // main Ability (polymère noir)
     const VI = M.visor;
+    const AL = ctx.mat({ color: 0xc6c9cf, roughness: 0.4, metalness: 0.35, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 0.65 }); // structure dorsale (alu peint)
     const GRL = ctx.mat({ color: 0x3a3e46, roughness: 0.5, metalness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.35, envMapIntensity: 0.6 }); // grilles latérales
     const gtex = low ? null : ctx.tex('grille').clone(); if (gtex) { gtex.needsUpdate = true; gtex.repeat.set(0.12, 0.12); }
     const SPK = ctx.mat({ color: 0x4a4e57, roughness: 0.45, metalness: 0.5, envMapIntensity: 0.6, map: gtex });       // haut-parleurs perforés (oreilles)
@@ -181,7 +182,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.apollo = (function () {
        ===================================================== */
     // CAO : bassin, taille, fixations ; le buste ne garde que le dos (structure) et le haut (ponts d'épaules)
     const torso = realN(/^(pelvis_link|torso_roll_link|torso_pitch_link|torso_link@(back|top)|neck_mount_fix_link|battery_mount_fix|[lr]_hip_ie_link|[lr]_hip_aa_link)$/,
-      gm => /@back/.test(gm.name) ? WS : colorOf(gm), { pivot: HIP, k, s: [1, tsy, 1] });
+      gm => /@back/.test(gm.name) ? AL : colorOf(gm), { pivot: HIP, k, s: [1, tsy, 1] });
     if (low) torso.add(ctx.mesh(patch('apLoChest', { tab: CH, map: band(0, 2 * PI, 21, 54), closed: true, nu: 10, nv: 4, c: 0, t: 0, capB: true, capT: true }), WH, { s: [1, tsy, 1] }));
     else {
       // buste procédural : bouclier avant laqué (2 panneaux, arête horizontale), grilles latérales, noyau sombre
