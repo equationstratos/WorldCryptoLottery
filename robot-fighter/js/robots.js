@@ -58,8 +58,8 @@ const ROSTER = [
    fs/fe : épaule/coude bras avant ; bs/be : bras arrière (0 = vers le bas, 90 = vers l'avant)
    fh/fk : hanche/genou jambe avant ; bh/bk : jambe arrière
    rot : rotation du corps entier ; sx : échelle horizontale (rotation sur soi-même) */
-const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx'];
-function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1 }; return Object.assign(p, o); }
+const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx', 'grip'];
+function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1, grip: 1 }; return Object.assign(p, o); }
 const POSES = {
   idle: mkPose({ lean: 8, hd: -4, fs: 50, fe: 100, bs: 28, be: 118, fh: 24, fk: 30, bh: -20, bk: 22 }),
   crouch: mkPose({ lean: 26, hd: -18, fs: 55, fe: 110, bs: 35, be: 115, fh: 78, fk: 125, bh: 22, bk: 128 }),
@@ -75,22 +75,22 @@ const POSES = {
   jp: mkPose({ lean: 18, hd: -6, fs: 55, fe: 0, bs: 50, be: 100, fh: 80, fk: 110, bh: 40, bk: 110 }),
   jk: mkPose({ lean: 0, hd: 0, fs: 80, fe: 80, bs: 40, be: 100, fh: 62, fk: 0, bh: 60, bk: 130 }),
   jhk: mkPose({ lean: -12, hd: 4, fs: 90, fe: 70, bs: 30, be: 100, fh: 95, fk: 4, bh: 30, bk: 120 }),
-  hit: mkPose({ lean: -24, hd: -18, fs: 20, fe: 70, bs: 8, be: 60, fh: 12, fk: 24, bh: -32, bk: 10 }),
+  hit: mkPose({ lean: -24, hd: -18, fs: 20, fe: 70, bs: 8, be: 60, fh: 12, fk: 24, bh: -32, bk: 10, grip: 0.4 }),
   chit: mkPose({ lean: 0, hd: -25, fs: 30, fe: 80, bs: 20, be: 80, fh: 70, fk: 125, bh: 20, bk: 125 }),
   block: mkPose({ lean: -4, hd: -12, fs: 112, fe: 140, bs: 98, be: 140, fh: 20, fk: 28, bh: -24, bk: 22 }),
   cblock: mkPose({ lean: 14, hd: -18, fs: 110, fe: 140, bs: 95, be: 140, fh: 78, fk: 125, bh: 22, bk: 128 }),
-  fall: mkPose({ lean: -30, hd: -30, fs: 150, fe: 30, bs: 130, be: 30, fh: 40, fk: 50, bh: -20, bk: 40 }),
-  down: mkPose({ lean: 0, hd: 10, fs: 160, fe: 10, bs: 170, be: 10, fh: 10, fk: 20, bh: -5, bk: 30 }),
-  projWind: mkPose({ lean: -8, hd: 0, fs: -25, fe: 85, bs: -40, be: 90, fh: 34, fk: 45, bh: -30, bk: 15 }),
-  proj: mkPose({ lean: 22, hd: -6, fs: 90, fe: 0, bs: 84, be: 8, fh: 40, fk: 30, bh: -38, bk: 8 }),
+  fall: mkPose({ lean: -30, hd: -30, fs: 150, fe: 30, bs: 130, be: 30, fh: 40, fk: 50, bh: -20, bk: 40, grip: 0.1 }),
+  down: mkPose({ lean: 0, hd: 10, fs: 160, fe: 10, bs: 170, be: 10, fh: 10, fk: 20, bh: -5, bk: 30, grip: 0.3 }),
+  projWind: mkPose({ lean: -8, hd: 0, fs: -25, fe: 85, bs: -40, be: 90, fh: 34, fk: 45, bh: -30, bk: 15, grip: 0.5 }),
+  proj: mkPose({ lean: 22, hd: -6, fs: 90, fe: 0, bs: 84, be: 8, fh: 40, fk: 30, bh: -38, bk: 8, grip: 0 }),
   upper: mkPose({ lean: -8, hd: -20, fs: 172, fe: 4, bs: 30, be: 100, fh: 70, fk: 95, bh: -12, bk: 15 }),
   flip: mkPose({ lean: -10, hd: 0, fs: 150, fe: 30, bs: 140, be: 30, fh: 140, fk: 4, bh: 20, bk: 60 }),
   spin: mkPose({ lean: -8, hd: 0, fs: 100, fe: 20, bs: 80, be: 20, fh: 95, fk: 2, bh: -10, bk: 20 }),
   rushWind: mkPose({ lean: -10, hd: 0, fs: 20, fe: 100, bs: -30, be: 100, fh: 30, fk: 50, bh: -40, bk: 20 }),
   rush: mkPose({ lean: 40, hd: -15, fs: 96, fe: 0, bs: -20, be: 60, fh: 50, fk: 20, bh: -55, bk: 10 }),
   win: mkPose({ lean: -4, hd: 10, fs: 168, fe: 15, bs: 30, be: 140, fh: 12, fk: 10, bh: -12, bk: 6 }),
-  win2: mkPose({ lean: 0, hd: 6, fs: 95, fe: 130, bs: 95, be: 130, fh: 15, fk: 10, bh: -15, bk: 8 }),
-  taunt: mkPose({ lean: -6, hd: 15, fs: 175, fe: 5, bs: 165, be: 10, fh: 10, fk: 10, bh: -10, bk: 8 })
+  win2: mkPose({ lean: 0, hd: 6, fs: 95, fe: 130, bs: 95, be: 130, fh: 15, fk: 10, bh: -15, bk: 8, grip: 0.3 }),
+  taunt: mkPose({ lean: -6, hd: 15, fs: 175, fe: 5, bs: 165, be: 10, fh: 10, fk: 10, bh: -10, bk: 8, grip: 0 })
 };
 function lerpPose(a, b, t) { const o = {}; for (const k of PKEYS) o[k] = a[k] + (b[k] - a[k]) * t; return o; }
 

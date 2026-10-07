@@ -168,8 +168,11 @@ function setTouchControls(on) { touchEl.classList.toggle('on', !!on && isTouch);
 
 // taps / clics sur le canvas (menus)
 let tapQueue = [];
+canvas.addEventListener('contextmenu', e => { if (window.__clickAttack) e.preventDefault(); });
 canvas.addEventListener('pointerdown', e => {
   AU.init();
+  // sur PC, pendant les combats : clic gauche = poing, clic droit = pied
+  if (window.__clickAttack && e.pointerType === 'mouse') keysHit.add(e.button === 2 ? 'KeyV' : 'KeyF');
   const r = canvas.getBoundingClientRect();
   tapQueue.push({ x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H });
 });

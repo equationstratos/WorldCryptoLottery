@@ -255,20 +255,28 @@ class Fight {
     if (choose === 2) { this.paused = false; this.phase = 'done'; setScene(new TitleScene(true)); }
   }
   /* ---------- rendu ---------- */
-  // caméra : centre (unités de jeu) et zoom courant
+  // caméra : centre (unités de jeu), zoom et angles cinématiques courants
+  cinematic() {
+    const sb = this.superFreeze > 0 ? this.superBy : null;
+    const mid = (this.p[0].x + this.p[1].x) / 2;
+    if (sb) { const k = easeOut(clamp((62 - this.superFreeze) / 10, 0, 1)); return { zoom: 1.24, orbit: 0.17 * sb.face * k, roll: 0.035 * sb.face * k, lift: 0.05 * k, fx: sb.x, fy: sb.hipY - 40 }; }
+    if (this.phase === 'ko' && this.phaseT < 110) { const l = this.p.find(f => f.ko) || this.p[0]; return { zoom: 1.14, orbit: -0.1 * l.face, roll: -0.02 * l.face, lift: 0.03, fx: l.x, fy: l.hipY - 30 }; }
+    if (this.phase === 'intro' && this.phaseT < 110) { const k = 1 - easeOut(clamp(this.phaseT / 110, 0, 1)); return { zoom: 1 + 0.12 * k, orbit: 0.16 * k, roll: 0, lift: 0.04 * k, fx: mid, fy: GROUND - 100 }; }
+    return { zoom: 1, orbit: 0, roll: 0, lift: 0, fx: mid, fy: GROUND - 100 };
+  }
   view() {
-    const Z = ZOOM * this.zoom;
+    const cam = this.cam || (this.cam = { zoom: 1, orbit: 0, roll: 0, lift: 0, fx: (this.p[0].x + this.p[1].x) / 2, fy: GROUND - 100 });
+    const Z = ZOOM * cam.zoom;
     let cx = this.camX + VIEW_W / 2;
-    if (this.zoom > 1.001 && this.zfx != null) cx = lerp(cx, this.zfx, clamp((this.zoom - 1) / 0.22, 0, 1));
-    return { cx, Z };
+    if (cam.zoom > 1.001) cx = lerp(cx, cam.fx, clamp((cam.zoom - 1) / 0.22, 0, 1));
+    return { cx, Z, orbit: cam.orbit, roll: cam.roll, lift: cam.lift, fx: cam.fx, fy: cam.fy };
   }
   draw() {
     const c = ctx;
     const sb = this.superFreeze > 0 ? this.superBy : null;
     if (R3) {
-      this.zoom += ((sb ? 1.22 : 1) - this.zoom) * 0.15;
-      if (sb) this.zfx = this.zfx == null ? sb.x : lerp(this.zfx, sb.x, 0.2);
-      else if (this.zoom < 1.002) this.zfx = null;
+      const tg = this.cinematic(), cam = this.cam || (this.cam = { ...tg });
+      for (const k in tg) cam[k] += (tg[k] - cam[k]) * (k === 'fx' || k === 'fy' ? 0.25 : 0.12);
     }
     const v = this.view();
     const sx = this.shake ? rand(-this.shake, this.shake) : 0, sy = this.shake ? rand(-this.shake, this.shake) * 0.6 : 0;
@@ -285,14 +293,16 @@ class Fight {
     // lignes de vitesse pendant un super
     if (sb) {
       c.save(); c.globalCompositeOperation = 'lighter'; c.strokeStyle = hexA(sb.ch.accent, 0.22); c.lineWidth = 3;
-      const cx = W / 2 + (sb.x - v.cx) * v.Z, cy = GY + (sb.hipY - 40 - GROUND) * v.Z;
+      const sp = R3 ? R3.project(sb.x, sb.hipY - 40) : { x: W / 2 + (sb.x - v.cx) * v.Z, y: GY + (sb.hipY - 40 - GROUND) * v.Z };
+      const cx = sp.x, cy = sp.y;
       for (let i = 0; i < 40; i++) { const a = rand(0, Math.PI * 2), r0 = rand(180, 300); c.beginPath(); c.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); c.lineTo(cx + Math.cos(a) * 1000, cy + Math.sin(a) * 1000); c.stroke(); }
       c.restore();
     }
     // monde (effets 2D alignés sur la 3D)
     c.save();
     c.translate(sx, sy);
-    c.translate(W / 2 - v.cx * v.Z, GY - GROUND * v.Z); c.scale(v.Z, v.Z);
+    if (R3) { const m = R3.overlay(v); c.transform(m[0], m[1], m[2], m[3], m[4], m[5]); }
+    else { c.translate(W / 2 - v.cx * v.Z, GY - GROUND * v.Z); c.scale(v.Z, v.Z); }
     if (!R3) {
       if (this.stage.wet) {
         c.save(); c.beginPath(); c.rect(this.camX - 100, FLOOR_Y, W + 200, H); c.clip();
@@ -343,32 +353,39 @@ class Fight {
     c.restore();
   }
   drawCutIn(c, f) {
+    // bandeau façon vidéo : gros plan du visage + traînées néon horizontales
     const t = 62 - this.superFreeze;
-    const inK = easeOut(clamp(t / 10, 0, 1)), outK = clamp((this.superFreeze - 0) / 8, 0, 1);
-    const k = inK * outK;
-    const left = f.side === 0;
-    c.save();
-    const y = 168, h = 150;
-    c.globalAlpha = k;
-    c.translate(0, y);
-    c.transform(1, -0.08, 0, 1, 0, 0);
-    let g = c.createLinearGradient(0, 0, W, 0);
-    g.addColorStop(0, hexA(f.ch.accent, left ? 0.95 : 0.2)); g.addColorStop(1, hexA(f.ch.accent, left ? 0.2 : 0.95));
+    const inK = easeOut(clamp(t / 9, 0, 1)), outK = clamp(this.superFreeze / 8, 0, 1), k = inK * outK;
+    const left = f.side === 0, y = 150, h = 190;
+    c.save(); c.globalAlpha = k;
+    c.translate(0, y); c.transform(1, -0.06, 0, 1, 0, 0);
     c.fillStyle = '#000'; c.fillRect(0, -6, W, h + 12);
+    let g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#05070d'); g.addColorStop(0.5, shade(f.ch.accent, -0.72)); g.addColorStop(1, '#05070d');
     c.fillStyle = g; c.fillRect(0, 0, W, h);
-    c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 2;
-    for (let i = 0; i < 30; i++) { const lx = ((i * 53 + t * 40 * (left ? 1 : -1)) % (W + 200) + W + 200) % (W + 200) - 100; c.beginPath(); c.moveTo(lx, 0); c.lineTo(lx + 60, h); c.stroke(); }
-    // portrait géant
     c.save(); c.beginPath(); c.rect(0, 0, W, h); c.clip();
-    const px = left ? lerp(-200, 210, inK) : lerp(W + 200, W - 210, inK);
-    const pose = mkPose({ ...POSES.idle, lean: 6, hd: -8 });
-    drawRobotAny(c, f.ch, pose, px, 40 + 190 * 1.9 * f.ch.scale, left ? 1 : -1, 1.9);
+    // gros plan
+    const hx = left ? lerp(-160, 230, inK) : lerp(W + 160, W - 230, inK);
+    if (R3) R3.drawHead(c, f.ch, hx, h * 0.52, h * 1.75, left ? 1 : -1, -0.95);
+    else drawRobotAny(c, f.ch, mkPose({ ...POSES.idle, lean: 6, hd: -8 }), hx, 40 + 190 * 1.9 * f.ch.scale, left ? 1 : -1, 1.9);
+    // traînées néon (vert, cyan, rose, blanc) qui traversent le bandeau
+    c.globalCompositeOperation = 'lighter';
+    const r = seeded(7 + (f.side * 13));
+    for (let i = 0; i < 46; i++) {
+      const yy = r() * h, len = 80 + r() * 380, sp = 24 + r() * 40, th = 1 + r() * 4;
+      const col = ['#3dff8a', '#3fd8ff', '#ff4fd8', '#ffffff', f.ch.accent][(r() * 5) | 0];
+      const xx = ((r() * (W + len) + t * sp * (left ? 1 : -1)) % (W + len) + (W + len)) % (W + len) - len;
+      const lg = c.createLinearGradient(xx, 0, xx + len, 0);
+      lg.addColorStop(0, hexA(col, 0)); lg.addColorStop(0.5, hexA(col, 0.75)); lg.addColorStop(1, hexA(col, 0));
+      c.fillStyle = lg; c.fillRect(xx, yy, len, th);
+    }
     c.restore();
+    c.strokeStyle = hexA(f.ch.accent, 0.9); c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0); c.lineTo(W, 0); c.moveTo(0, h); c.lineTo(W, h); c.stroke();
     c.restore();
     c.save(); c.globalAlpha = k;
-    const tx = left ? lerp(W + 300, W - 60, inK) : lerp(-300, 60, inK);
-    txt('SUPER', tx, y + 30, 18, { align: left ? 'right' : 'left', color: '#fff', stroke: '#000', sw: 5 });
-    bigTxt(f.ch.supName, tx, y + 82, 40, { align: left ? 'right' : 'left' });
+    const tx = left ? lerp(W + 300, W - 50, inK) : lerp(-300, 50, inK);
+    txt('SUPER', tx, y + 46, 20, { align: left ? 'right' : 'left', color: '#fff', stroke: '#000', sw: 5, font: FONT_BIG, italic: true });
+    bigTxt(f.ch.supName, tx, y + 104, 42, { align: left ? 'right' : 'left' });
     c.restore();
   }
   /* HUD façon vidéo : longues barres biseautées, chrono central, pastilles de manches */
@@ -625,20 +642,103 @@ function drawGridBg(c, t, col) {
   for (let y = -(t * 0.5 % 40); y < H; y += 40) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
 }
 
+/* =================== MARIONNETTES DE MENU =================== */
+// Enchaînements de poses joués par les robots dans les menus (entrée, démonstrations, victoire).
+// Clé : [pose (nom de POSES ou objet), durée en frames pour l'atteindre, options {yaw, dx, dy, spin, fx}]
+const PUPPET_SEQ = {
+  enter: [['crouch', 0, { yaw: -1.3, dx: -40 }], ['idle', 14, { yaw: -0.42 }], ['lp', 5, { fx: 'whiff' }], ['idle', 6], ['lp', 5, { fx: 'whiff' }], ['hp', 6, { fx: 'whiffH' }], ['idle', 14]],
+  combo: [['lp', 5, { fx: 'whiff' }], ['idle', 5], ['lp', 5, { fx: 'whiff' }], ['hp', 6, { fx: 'whiffH' }], ['idle', 6], ['hk', 9, { fx: 'whiffH' }], ['hk', 8], ['idle', 12]],
+  kick: [['crouch', 7], ['chk', 7, { fx: 'whiffH' }], ['chk', 6], ['idle', 10], ['lk', 6, { fx: 'whiff' }], ['hk', 9, { fx: 'whiffH' }], ['hk', 6], ['idle', 12]],
+  special: [['projWind', 14, { fx: 'charge' }], ['proj', 6, { fx: 'fire' }], ['proj', 24], ['idle', 14]],
+  uppercut: [['crouch', 8, { fx: 'charge' }], ['upper', 9, { dy: 70, fx: 'rise' }], ['upper', 9, { dy: 80 }], ['jump', 10, { dy: 25 }], ['crouch', 6], ['idle', 10]],
+  flip: [['crouch', 8, { fx: 'charge' }], [{ ...POSES.flip, rot: -170 }, 9, { dy: 70, fx: 'rise' }], [{ ...POSES.flip, rot: -350 }, 9, { dy: 55 }], ['crouch', 8], ['idle', 10]],
+  spin: [['jump', 8, { dy: 30, fx: 'charge' }], ['spin', 6, { dy: 45, spin: 0, fx: 'rise' }], ['spin', 30, { dy: 45, spin: Math.PI * 6 }], ['jump', 6, { dy: 15 }], ['idle', 10]],
+  rush: [['rushWind', 10, { fx: 'charge' }], ['rush', 7, { dx: 55, fx: 'rise' }], ['rush', 8, { dx: 65 }], ['idle', 16, { dx: 0 }]],
+  taunt: [['taunt', 14], ['win2', 12], ['taunt', 12], ['idle', 14]],
+  confirm: [['crouch', 7, { fx: 'charge' }], ['upper', 9, { dy: 55, fx: 'burst' }], ['win', 14], ['win', 30]]
+};
+class Puppet {
+  constructor() { this.seq = null; this.t = 0; this.idleT = 0; this.hold = null; this.onFx = null; }
+  play(name, hold) {
+    const seq = PUPPET_SEQ[name]; if (!seq) return;
+    this.seq = seq; this.name = name; this.t = 0; this.hold = hold || null; this.fired = new Set(); this.idleT = 0;
+    let acc = 0; this.times = seq.map(k => (acc += k[1]));
+  }
+  get busy() { return !!this.seq; }
+  update() {
+    this.idleT++;
+    if (!this.seq) return;
+    this.t++;
+    this.times.forEach((tt, i) => { const fx = this.seq[i][2] && this.seq[i][2].fx; if (fx && !this.fired.has(i) && this.t >= tt - this.seq[i][1]) { this.fired.add(i); this.onFx && this.onFx(fx, this.state()); } });
+    if (this.t > this.times[this.times.length - 1]) { const h = this.hold; this.seq = null; this.idleT = 0; if (h) this.play(h, h); }
+  }
+  state() {
+    const breathe = Math.sin(performance.now() / 1000 * 4.2) * 2.5;
+    const idle = { ...POSES.idle, fe: POSES.idle.fe + breathe, be: POSES.idle.be - breathe, fk: POSES.idle.fk + breathe, lean: POSES.idle.lean + breathe * 0.3 };
+    const P = n => typeof n === 'string' ? (n === 'idle' ? idle : POSES[n]) : n;
+    const opt = (k, key, def) => (k && k[2] && k[2][key] != null) ? k[2][key] : def;
+    if (!this.seq) return { pose: idle, yaw: -0.42, dx: 0, dy: 0 };
+    const t = this.t, sq = this.seq;
+    let i = this.times.findIndex(tt => tt >= t); if (i < 0) i = sq.length - 1;
+    const prev = sq[Math.max(0, i - 1)], cur = sq[i];
+    const t0 = i ? this.times[i - 1] : 0, d = Math.max(1, cur[1]);
+    const k = i === 0 ? 1 : easeOut(clamp((t - t0) / d, 0, 1));
+    const pa = P(prev[0]), pb = P(cur[0]);
+    const pose = lerpPose(pa, pb, k);
+    const L = key => lerp(opt(prev, key, key === 'yaw' ? -0.42 : 0), opt(cur, key, key === 'yaw' ? -0.42 : 0), k);
+    pose.spin = L('spin');
+    return { pose, yaw: L('yaw'), dx: L('dx'), dy: L('dy') };
+  }
+}
+// effets visuels des marionnettes (coordonnées écran) : ch, x/pied, échelle, sens
+function puppetFx(kind, ch, x, footY, sc, face) {
+  const hx = x + face * 45 * sc, hy = footY - 125 * sc;
+  if (kind === 'whiff') AU.sfx('whiff');
+  else if (kind === 'whiffH') AU.sfx('whiffH');
+  else if (kind === 'charge') { AU.sfx('upper'); for (let i = 0; i < 26; i++) FX.add({ type: 'glow', x: hx + rand(-110, 110), y: hy + rand(-110, 110), size: rand(6, 12), life: 18, max: 18, col: ch.accent, target: { x: hx, y: hy } }); }
+  else if (kind === 'fire') {
+    AU.sfx('proj');
+    for (let i = 0; i < 22; i++) FX.add({ type: 'glow', x: hx + face * i * 9, y: hy + rand(-8, 8), vx: face * rand(6, 11), size: 30 - i, life: 26, max: 26, col: ch.proj.color, core: '#fff' });
+    FX.add({ type: 'ring', x: hx, y: hy, size: 90, life: 14, max: 14, col: ch.proj.color, flat: 1.3 });
+  }
+  else if (kind === 'rise') { AU.sfx('rush'); for (let i = 0; i < 18; i++) FX.add({ type: 'spark', x: x + rand(-30, 30) * sc, y: footY - rand(0, 160) * sc, vx: rand(-2, 2), vy: rand(-12, -5), size: 2.5, life: 16, max: 16, col: ch.accent, len: 3 }); dust(x, footY, 10); }
+  else if (kind === 'burst') { AU.sfx('hitS'); explosion(x, footY - 110 * sc, ch.accent, 1.3); }
+}
+function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H one'), 0.6, 0.95); }
+const DEMOS = ch => ['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'taunt'];
+
 /* =================== SÉLECTION =================== */
 class SelectScene {
   constructor(mode) {
     this.mode = mode; this.t = 0; this.cur = [0, 1]; this.done = [false, mode === 'arcade'];
     this.out = 0; mergeKeyboards = mode === 'arcade'; setTouchControls(false);
     AU.playTrack(TRACKS.select);
-    this.anim = 0;
+    this.anim = 0; this.shake = 0; this.flash = 0; this.demoI = [0, 0];
+    FX.clear();
+    this.pup = [new Puppet(), new Puppet()];
+    this.pup.forEach((pp, p) => { pp.onFx = kind => this.fx(p, kind); pp.play('enter'); });
   }
+  previewX(p) { return p === 0 ? 150 : W - 150; }
+  fx(p, kind) {
+    const ch = ROSTER[this.cur[p]], face = p === 0 ? 1 : -1;
+    puppetFx(kind, ch, this.previewX(p), 455, 1.55, face);
+    if (kind === 'burst') { this.shake = 12; this.flash = 8; }
+  }
+  demo(p) { const ch = ROSTER[this.cur[p]], list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length], this.done[p] ? 'taunt' : null); }
   tile(i) { const col = i % 4, row = (i / 4) | 0; return { x: W / 2 - 2 * 92 + col * 92, y: 318 + row * 92, s: 84 }; }
   update() {
     this.t++; this.anim++;
+    FX.update(); this.pup.forEach(pp => pp.update());
+    if (this.shake) this.shake *= 0.85; if (this.shake < 0.4) this.shake = 0; if (this.flash) this.flash--;
     const taps = tapQueue.splice(0);
+    // démonstration automatique quand on reste sur un robot
+    for (let p = 0; p < 2; p++) if (!this.pup[p].busy && this.pup[p].idleT > (this.done[p] ? 150 : 200)) this.demo(p);
+    // toucher / cliquer le grand robot : il fait une démonstration
+    for (const t of taps) for (let p = 0; p < (this.mode === 'versus' ? 2 : 1); p++) {
+      if (inRect(t, this.previewX(p) - 120, 120, 240, 340)) { this.demo(p); AU.sfx('select'); }
+    }
     if (escPressed) { AU.sfx('select'); setScene(new TitleScene(true)); return; }
-    if (this.out) { if (++this.out > 50) this.go(); return; }
+    if (this.out) { if (++this.out > 75) this.go(); return; }
     for (let p = 0; p < 2; p++) {
       if (this.done[p]) continue;
       const pd = pads[p];
@@ -646,20 +746,21 @@ class SelectScene {
       if (pd.pressed.l) c = (c % 4 === 0) ? c + 3 : c - 1;
       if (pd.pressed.r) c = (c % 4 === 3) ? c - 3 : c + 1;
       if (pd.pressed.u || pd.pressed.d) c = (c + 4) % 8;
-      if (c !== this.cur[p]) { this.cur[p] = c; AU.sfx('move'); }
+      if (c !== this.cur[p]) { this.cur[p] = c; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; }
       if (confirmPressed(pd)) this.pickChar(p);
     }
     for (const t of taps) for (let i = 0; i < 8; i++) {
       const r = this.tile(i);
       if (inRect(t, r.x - r.s / 2, r.y - r.s / 2, r.s, r.s)) {
         const p = this.done[0] ? 1 : 0; if (this.done[p]) break;
-        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; AU.sfx('move'); }
+        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; sayName(ROSTER[i]); }
       }
     }
     if (taps.some(t => inRect(t, W / 2 - 90, 500, 180, 34))) { const p = this.done[0] ? 1 : 0; if (!this.done[p]) this.pickChar(p); }
   }
   pickChar(p) {
-    this.done[p] = true; AU.sfx('confirm'); AU.say(ROSTER[this.cur[p]].name.replace('02', 'zero two').replace('H1', 'H one'), 0.6, 0.95);
+    this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]);
+    this.pup[p].play('confirm', 'taunt');
     if (this.done[0] && this.done[1]) this.out = 1;
   }
   go() {
@@ -677,6 +778,8 @@ class SelectScene {
   }
   draw() {
     const c = ctx;
+    c.save();
+    if (this.shake) c.translate(rand(-this.shake, this.shake), rand(-this.shake, this.shake) * 0.6);
     drawGridBg(c, this.t, '#ff5a5a');
     bigTxt('CHOISISSEZ VOTRE ROBOT', W / 2, 40, 36);
     // grands aperçus
@@ -687,9 +790,13 @@ class SelectScene {
       const g = c.createRadialGradient(x, 250, 10, x, 250, 190);
       g.addColorStop(0, hexA(ch.accent, 0.4)); g.addColorStop(1, hexA(ch.accent, 0));
       c.fillStyle = g; c.fillRect(x - 200, 60, 400, 400);
-      const pose = this.done[p] ? lerpPose(POSES.idle, POSES.win, (Math.sin(this.t * 0.1) + 1) / 2 * 0.3 + 0.7) : { ...POSES.idle, fe: POSES.idle.fe + Math.sin(this.t * 0.08) * 3, fk: POSES.idle.fk + Math.sin(this.t * 0.08) * 3 };
-      const sk = skeleton(ch, pose, left ? 1 : -1, 1.55);
-      drawRobotAny(c, ch, pose, x, 455, left ? 1 : -1, 1.55);
+      const st = this.pup[p].state();
+      // socle lumineux
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const fl = c.createRadialGradient(x, 458, 4, x, 458, 120); fl.addColorStop(0, hexA(ch.accent, 0.55)); fl.addColorStop(1, hexA(ch.accent, 0));
+      c.fillStyle = fl; c.beginPath(); c.ellipse(x, 458, 120, 22, 0, 0, 7); c.fill(); c.restore();
+      drawRobotAny(c, ch, st.pose, x + st.dx * 1.55 * (left ? 1 : -1), 455 - st.dy * 1.55, left ? 1 : -1, 1.55, { yaw: st.yaw, st: this.done[p] ? 'win' : 'idle' });
+      if (this.done[p]) txt('PRÊT !', x, 140, 22, { font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 6, glow: ch.accent, alpha: 0.6 + 0.4 * Math.sin(this.t * 0.2) });
       txt(ch.name, x, 82, 20, { color: '#fff', stroke: '#000', sw: 5, glow: ch.accent });
       txt(ch.maker + ' · ' + ch.country, x, 106, 9, { color: ch.accent, stroke: '#000', sw: 3 });
       const stat = (lab, v, yy) => {
@@ -726,7 +833,10 @@ class SelectScene {
       c.fillStyle = 'rgba(255,210,58,.2)'; c.fillRect(W / 2 - 90, 500, 180, 34); c.strokeStyle = '#ffd23a'; c.strokeRect(W / 2 - 90, 500, 180, 34);
       txt('VALIDER', W / 2, 517, 12, { color: '#ffd23a' });
     } else txt(this.mode === 'versus' ? 'J1 : ZQSD/WASD + F   ·   J2 : FLÈCHES + K' : 'Flèches + ENTRÉE pour valider', W / 2, 517, 9, { color: '#aaa' });
-    if (this.out) { c.fillStyle = `rgba(255,255,255,${Math.max(0, 0.6 - this.out / 30)})`; c.fillRect(0, 0, W, H); }
+    FX.draw(c);
+    c.restore();
+    if (this.flash) { c.fillStyle = `rgba(255,255,255,${this.flash / 14})`; c.fillRect(0, 0, W, H); }
+    if (this.out > 40) { c.fillStyle = `rgba(255,255,255,${Math.min(0.8, (this.out - 40) / 30)})`; c.fillRect(0, 0, W, H); }
   }
 }
 function wrapText(c, s, x, y, maxW, lh, font, col) {
@@ -739,10 +849,16 @@ function wrapText(c, s, x, y, maxW, lh, font, col) {
 
 /* =================== VS =================== */
 class VsScene {
-  constructor(ch1, ch2, stageIdx, next, label) { this.a = ch1; this.b = ch2; this.st = stageIdx; this.next = next; this.t = 0; this.label = label; setTouchControls(false); AU.stopMusic(); }
+  constructor(ch1, ch2, stageIdx, next, label) {
+    this.a = ch1; this.b = ch2; this.st = stageIdx; this.next = next; this.t = 0; this.label = label; setTouchControls(false); AU.stopMusic();
+    this.pup = [new Puppet(), new Puppet()]; this.pup.forEach(p => p.play('enter'));
+  }
   update() {
     this.t++; const taps = tapQueue.splice(0);
-    if (this.t === 30) { AU.sfx('hitS'); }
+    this.pup.forEach(p => p.update());
+    if (this.t === 30) { AU.sfx('hitS'); this.pup[0].play('taunt'); }
+    if (this.t === 70) this.pup[1].play('taunt');
+    if (this.t === 130) { this.pup[0].play('special'); this.pup[1].play('combo'); }
     if (this.t === 32) AU.say(`${this.a.name.replace('02', 'zero two').replace('H1', 'H one')}. versus. ${this.b.name.replace('02', 'zero two').replace('H1', 'H one')}`, 0.4, 0.9);
     if (this.t > 220 || (this.t > 40 && (confirmPressed(pads[0]) || taps.length))) this.next();
   }
@@ -763,9 +879,8 @@ class VsScene {
       c.strokeStyle = 'rgba(255,255,255,.08)';
       for (let i = 0; i < 25; i++) { const y = (i * 37 + t * 6 * (left ? 1 : -1)) % H; c.beginPath(); c.moveTo(0, (y + H) % H); c.lineTo(W, (y + H) % H); c.stroke(); }
       const x = left ? lerp(-300, 230, k) : lerp(W + 300, W - 230, k);
-      const pose = { ...POSES.idle, fe: POSES.idle.fe + Math.sin(t * 0.08) * 4 };
-      const sk = skeleton(ch, pose, left ? 1 : -1, 2.3);
-      drawRobotAny(c, ch, pose, x, H + 120, left ? 1 : -1, 2.3);
+      const st = this.pup[left ? 0 : 1].state();
+      drawRobotAny(c, ch, st.pose, x + st.dx * 2.3 * (left ? 1 : -1), H + 120 - st.dy * 2.3, left ? 1 : -1, 2.3, { yaw: st.yaw });
       c.restore();
       txt(ch.name, left ? lerp(-200, 40, k) : lerp(W + 200, W - 40, k), H - 60, 30, { align: left ? 'left' : 'right', font: FONT_BIG, italic: true, color: '#fff', stroke: '#000', sw: 7 });
       txt(ch.maker, left ? lerp(-200, 42, k) : lerp(W + 200, W - 42, k), H - 28, 11, { align: left ? 'left' : 'right', color: ch.accent, stroke: '#000', sw: 4 });
@@ -880,13 +995,15 @@ scene = new TitleScene(false);
 let last = performance.now(), acc = 0;
 const STEP = 1000 / 60;
 function loop(now) {
-  acc += Math.min(100, now - last); last = now;
+  const dtFrame = now - last;
+  acc += Math.min(100, dtFrame); last = now;
+  if (R3 && scene instanceof FightScene) R3.perfTick(dtFrame);
   while (acc >= STEP) {
     pollInput();
     if (musicToggle) { AU.toggleMusic(); musicToggle = false; }
     if (nextScene && fade >= 0) {
       fade += 1;
-      if (fade >= 10) { if (scene && scene.leave) scene.leave(); scene = nextScene; nextScene = null; fade = -10; }
+      if (fade >= 10) { if (scene && scene.leave) scene.leave(); scene = nextScene; nextScene = null; fade = -10; window.__clickAttack = scene instanceof FightScene; }
     } else {
       if (fade < 0) fade++;
       scene.update();

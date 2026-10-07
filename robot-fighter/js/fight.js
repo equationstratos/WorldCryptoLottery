@@ -98,6 +98,11 @@ function hitSpark(x, y, lvl, col, dir, blocked) {
     const a = rand(-1.2, 1.2) + (dir > 0 ? 0 : Math.PI), v = rand(5, 10 + lvl * 4);
     FX.add({ type: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, g: 0.35, drag: 0.94, life: rand(12, 26) | 0, max: 26, size: 3, col: pick(['#fff3a0', '#ffc23a', '#ff8a1c', col]), len: 2.5 });
   }
+  // petites étoiles bleues qui jaillissent de l'impact (comme dans la vidéo)
+  for (let i = 0; i < 2 + lvl * 2; i++) {
+    const a = rand(0, Math.PI * 2), v = rand(3, 7 + lvl);
+    FX.add({ type: 'star', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.5, drag: 0.9, g: 0.05, size: rand(7, 12) * zk, life: rand(16, 26) | 0, max: 26, col: pick(['#8fe3ff', '#bdf0ff', '#ffffff']), rot: rand(0, 3) });
+  }
   // éclats métalliques : ce sont des robots !
   for (let i = 0; i < 3 + lvl * 2; i++)
     FX.add({ type: 'debris', x, y, vx: dir * rand(1, 7) + rand(-2, 2), vy: rand(-9, -3), g: 0.5, life: rand(30, 60) | 0, max: 60, size: rand(3, 7), col: pick(['#cfd3da', '#8a9099', '#ffd27a']) });
