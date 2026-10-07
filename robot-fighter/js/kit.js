@@ -36,7 +36,9 @@
      <s>fo        pied    (origine = cheville, +X = pointe du pied, semelle sous la cheville
                   à y ≈ -ankleH ; ankleH ≈ 7..9).
    shZ / hpZ : écart latéral des épaules / hanches (unités design).
-   tick(t, state) facultatif : animations (LED qui pulsent, yeux…). state = { pose, st, k }.
+   tick(t, state) facultatif : animations (LED qui pulsent, yeux…). state = { pose, st, face }.
+     (face = -1 quand le robot regarde à gauche : tout le modèle est alors en miroir ; pour garder
+      un texte lisible, le placer dans un groupe userData.noMerge et faire group.scale.z = state.face)
      Ne doit modifier que des matériaux, ou des objets marqués userData.noMerge = true.
 
    RÈGLES
@@ -349,7 +351,7 @@ const RK = (function () {
     P.torso.position.set(S.hip.x, -S.hip.y, 0); P.torso.rotation.set(0, 0, torsoA);
     setLimb(P.neck, S.neck, S.head, 0);
     P.head.position.set(S.head.x, -S.head.y, 0); P.head.rotation.set(0, 0, ang(S.neck, S.head));
-    if (rb.tick) rb.tick(t, { pose: p, st });
+    if (rb.tick) rb.tick(t, { pose: p, st, face });
     return S;
   }
   function setFlash(rb, k) {
