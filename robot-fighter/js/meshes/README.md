@@ -22,8 +22,7 @@ publié sous licence libre : ils sont modélisés à la main d'après des photos
 Régénérer (dépendances : `pip install mujoco pyfqmr numpy`) :
 
 ```sh
-python3 -I tools/mjcf2rk.py <menagerie>/unitree_h1/h1.xml js/meshes/h1.js --id h1 --budget 42000 --low 5000 \
-  --license "BSD-3-Clause, © 2016-2023 Unitree Robotics" --src "MuJoCo Menagerie / unitree_h1 (Unitree Robotics)"
+python3 -I tools/h1conv.py <menagerie>/unitree_h1/h1.xml js/meshes/h1.js   # budgets par pièce (CAO difficile à décimer)
 python3 -I tools/mjcf2rk.py <menagerie>/apptronik_apollo/apptronik_apollo.xml js/meshes/apollo.js --id apollo --budget 52000 --low 6000 \
   --license "Apache-2.0, © Apptronik" --src "MuJoCo Menagerie / apptronik_apollo (Apptronik)"
 python3 -I tools/mjcf2rk.py <menagerie>/agility_cassie/cassie.xml js/meshes/cassie.js --id cassie --key home --budget 24000 --low 3000 \
