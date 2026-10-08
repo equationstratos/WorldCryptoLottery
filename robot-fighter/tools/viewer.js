@@ -108,6 +108,12 @@
   const hb = new T.Box3().setFromObject(rbA.P.head);
   report.idle = { height: +bb.max.y.toFixed(1), lowestY: +bb.min.y.toFixed(1), feetLowestY: +fb.min.y.toFixed(1), headTop: +hb.max.y.toFixed(1),
     widthX: +(bb.max.x - bb.min.x).toFixed(1), depthZ: +(bb.max.z - bb.min.z).toFixed(1) };
+  // debout, jambes tendues, buste droit : hauteur réelle (sommet de la tête) et part des jambes (hanche / hauteur)
+  {
+    const ps = mkPose({}); place(rbA, ps, -Math.PI / 2); rbA.root.updateMatrixWorld(true);
+    const hs = new T.Box3().setFromObject(rbA.P.head), hipY = new T.Vector3().setFromMatrixPosition(rbA.P.torso.matrixWorld).y;
+    report.stand = { height: +new T.Box3().setFromObject(rbA.root).max.y.toFixed(1), headTop: +hs.max.y.toFixed(1), hipY: +hipY.toFixed(1), legPct: +(100 * hipY / hs.max.y).toFixed(1) };
+  }
   // continuité des membres (en repère local de la pièce, unités design)
   const Ld = {}; { const Ls = skeleton(ch, POSES.idle, 1)._L; for (const k in Ls) Ld[k] = Ls[k] / ch.scale; }
   report.limbs = {};

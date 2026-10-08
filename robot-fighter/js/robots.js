@@ -90,7 +90,13 @@ const ROSTER = [
     scale: 1.02, leg: 1.0, bulk: 1.08, chest: 1.1, speed: 0.92, power: 1.15, stage: 4,
     proj: { name: 'IGNITION ORB', style: 'orb', color: '#ff6a2b', core: '#fff0e0' },
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
-    bio: 'Né des recherches de la NASA. Force brute et fiabilité.' }
+    bio: 'Né des recherches de la NASA. Force brute et fiabilité.' },
+  { id: 'asimov', name: 'ASIMOV', full: 'Asimov v1', maker: 'MENLO RESEARCH', country: 'OPEN SOURCE', year: 2025,
+    body: '#2c3236', trim: '#c9a25a', joint: '#1a1d20', accent: '#ffc845', visor: '#060708', head: 'asimov',
+    scale: 0.96, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
+    proj: { name: 'GIT PUSH', style: 'wave', color: '#ffbf3a', core: '#fff4d6' },
+    move: 'flip', moveName: 'PULL REQUEST', sup: 'rush', supName: 'MERGE CONFLICT', throwType: 'suplex', throwName: 'SUDO SUPLEX',
+    bio: 'L\'humanoïde open source de Menlo Research, livré en kit DIY. 1,2 m en vrai… 1,85 m en version combat.' }
 ];
 
 /* ---------- poses (angles en degrés) ----------
@@ -499,7 +505,8 @@ function portrait(ch, size = 120, flip = false) {
   c.fillStyle = g; c.fillRect(0, 0, size, size);
   c.strokeStyle = hexA(ch.accent, 0.25); c.lineWidth = 1;
   for (let i = -size; i < size * 2; i += 8) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i - size, size); c.stroke(); }
-  if (typeof R3 !== 'undefined' && R3) { c.drawImage(R3.headShot(ch, size, flip ? -1 : 1, 0.62), 0, size * 0.04); PORTRAIT_CACHE[key] = cv; return cv; }
+  // même cadrage que l'icône du combat (HUD) : gros plan tête et épaules qui remplit la case
+  if (typeof R3 !== 'undefined' && R3) { c.drawImage(R3.headShot(ch, size, flip ? -1 : 1), 0, size * 0.03); PORTRAIT_CACHE[key] = cv; return cv; }
   const sc = size / 70;
   const pose = mkPose({ ...POSES.idle, lean: 4, hd: -6, fs: 20, fe: 30, bs: 15, be: 30 });
   const face = flip ? -1 : 1;
