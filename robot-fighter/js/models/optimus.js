@@ -305,24 +305,28 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       finger: { color: 0x2c2d33, roughness: 0.2, metalness: 1, envMapIntensity: 1.1 },
       led: { glow: 0xffbe3c, i: 3.8 }
     },
-    // CHROME LIQUIDE : coques et casque miroir, articulations noir piano, LED ultraviolet
+    // CHROME LIQUIDE : coques et casque miroir, pièces noires en chrome fumé violine, LED ultraviolet épaissie
+    // (envMapIntensity modéré : un miroir à 1.8 renvoyait les enseignes néon au-delà du seuil du bloom → taches roses)
     chrome: {
-      shell: { color: 0xf6f8fb, roughness: 0.1, metalness: 1, envMapIntensity: 1.8 },
+      shell: { color: 0xe2e6ec, roughness: 0.12, metalness: 1, envMapIntensity: 1.3 },
       helmet: 'shell',
+      black: { color: 0x2a2240, roughness: 0.14, metalness: 1, envMapIntensity: 1.25 },
+      satin: { color: 0x1d1928, roughness: 0.3, metalness: 0.85, envMapIntensity: 0.9 },
       letters: { color: 0x07080a, roughness: 0.2, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08 },
       steel: { color: 0x2a2c31, roughness: 0.12, metalness: 1, envMapIntensity: 1.2 },
       visor: { color: 0x07050d, roughness: 0.03, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 1.2 },
-      led: { glow: 0xa070ff, i: 5.5 }
+      led: { glow: 0xa070ff, i: 6 }, ledR: 0.5
     },
-    // ROUGE TESLA : rouge métallisé multicouche (« Ultra Red »), noir laqué, lettrage chromé, LED blanche
+    // ROUGE TESLA : rouge métallisé multicouche (« Ultra Red »), noir laqué, lettrage blanc nacré, LED blanche
     rouge: {
-      shell: { color: 0xa50d1c, roughness: 0.32, metalness: 0.5, clearcoat: 1, clearcoatRoughness: 0.025, envMapIntensity: 0.8 },
-      letters: { color: 0xeef1f5, roughness: 0.08, metalness: 1, envMapIntensity: 1.3 },
+      shell: { color: 0xb40f20, roughness: 0.3, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.025, envMapIntensity: 0.85 },
+      letters: { color: 0xf2f4f8, roughness: 0.3, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 },
       led: { glow: 0xf2f4ff, i: 3.4 }
     },
-    // OR 24 CARATS : placage or poli, noir laqué, LED ambre
+    // OR 24 CARATS : placage or poli miroir (sans vernis, qui délavait l'or en cyan), légère chaleur interne
+    // pour qu'il reste « or » sous les néons cyan / verts, noir laqué, LED ambre
     or: {
-      shell: { color: 0xffc95e, roughness: 0.22, metalness: 0.88, clearcoat: 0.5, clearcoatRoughness: 0.06, envMapIntensity: 1.0, inner: 0xffa83a, ii: 0.035 },
+      shell: { color: 0xffcf5c, roughness: 0.15, metalness: 1, envMapIntensity: 1.05, inner: 0xffa230, ii: 0.05 },
       steel: { color: 0xffd98a, roughness: 0.12, metalness: 1, envMapIntensity: 1.3 },
       graph: { color: 0x1d1d20, roughness: 0.22, metalness: 1, envMapIntensity: 1.0 },
       letters: { color: 0x0a0a0c, roughness: 0.25, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.1 },
@@ -352,11 +356,12 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       led: { glow: 0xc6f3ff, i: 3.6 }
     },
     // MILITAIRE : camouflage olive mat, noir olive « cerakote », marquages au pochoir, LED vert nuit
+    // (camouflage éclairci + vernis satiné : l'ancien olive mat se fondait dans les décors sombres)
     army: {
-      shell: { color: 0xffffff, pat: 'camo', ps: 1 / 56, roughness: 0.68, metalness: 0.05, clearcoat: 0.12, clearcoatRoughness: 0.6, envMapIntensity: 0.35 },
-      black: { color: 0x34382a, roughness: 0.6, metalness: 0.2, clearcoat: 0.2, clearcoatRoughness: 0.5, envMapIntensity: 0.4 },
+      shell: { color: 0xffffff, pat: 'camo', ps: 1 / 56, roughness: 0.56, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.42, envMapIntensity: 0.5 },
+      black: { color: 0x30342a, roughness: 0.5, metalness: 0.25, clearcoat: 0.3, clearcoatRoughness: 0.4, envMapIntensity: 0.45 },
       satin: { color: 0x22251d, roughness: 0.55, metalness: 0.25, envMapIntensity: 0.4 },
-      helmet: { color: 0x565c38, roughness: 0.62, metalness: 0.05, clearcoat: 0.15, clearcoatRoughness: 0.6, envMapIntensity: 0.35 },
+      helmet: { color: 0x6c7448, roughness: 0.52, metalness: 0.05, clearcoat: 0.3, clearcoatRoughness: 0.42, envMapIntensity: 0.5 },
       graph: { color: 0x3a3d37, roughness: 0.45, metalness: 0.8, envMapIntensity: 0.6 },
       steel: { color: 0x9c8a5a, roughness: 0.4, metalness: 0.9, envMapIntensity: 0.7 },
       letters: { color: 0xd9d0a8, roughness: 0.82 },
@@ -393,7 +398,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
       }; };
       const fbm = () => { const a = mk(4), b = mk(8), e = mk(16); return (x, y) => a(x, y) * 0.58 + b(x, y) * 0.3 + e(x, y) * 0.12; };
       const A = fbm(), B = fbm(), C = fbm(), E = fbm();
-      const COL = { base: [122, 128, 78], brown: [112, 88, 58], dark: [64, 75, 44], black: [32, 33, 28], tan: [178, 168, 120] };
+      const COL = { base: [150, 156, 98], brown: [134, 104, 68], dark: [80, 94, 52], black: [38, 40, 33], tan: [204, 192, 142] };
       for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
         const u = x / n, v = y / n;
         let col = COL.base;
@@ -404,17 +409,17 @@ if (typeof RK !== 'undefined' && RK) RK.models.optimus = (function () {
         const gr = 0.94 + rnd() * 0.08;
         put(y * n + x, col[0] * gr, col[1] * gr, col[2] * gr);
       }
-    } else if (kind === 'frost') { // glace craquelée : arêtes de cellules de Voronoï (raccordable)
-      const pts = Array.from({ length: 26 }, () => [rnd() * n, rnd() * n]);
+    } else if (kind === 'frost') { // glace craquelée : facettes de Voronoï à teinte franche + fines fêlures blanches (raccordable)
+      const pts = Array.from({ length: 26 }, () => [rnd() * n, rnd() * n, rnd()]);
       for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-        let d1 = 1e9, d2 = 1e9;
-        for (const [px, py] of pts) for (let oy = -n; oy <= n; oy += n) for (let ox = -n; ox <= n; ox += n) {
+        let d1 = 1e9, d2 = 1e9, cv = 0;
+        for (const [px, py, pv] of pts) for (let oy = -n; oy <= n; oy += n) for (let ox = -n; ox <= n; ox += n) {
           const dd = (x - px - ox) ** 2 + (y - py - oy) ** 2;
-          if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) d2 = dd;
+          if (dd < d1) { d2 = d1; d1 = dd; cv = pv; } else if (dd < d2) d2 = dd;
         }
         const e = Math.sqrt(d2) - Math.sqrt(d1);
-        const v = 196 + 34 * Math.min(1, Math.sqrt(d1) / 40) + (e < 1.6 ? 40 : e < 4 ? 18 : 0) + rnd() * 8;
-        put(y * n + x, Math.min(255, v), Math.min(255, v + 4), 255);
+        const v = 150 + 40 * cv + (e < 1.2 ? 90 : e < 3 ? 35 * (1 - (e - 1.2) / 1.8) : 0) + 18 * Math.exp(-Math.sqrt(d1) / 30) + rnd() * 6;
+        put(y * n + x, Math.max(0, v - 26), Math.min(255, v + 6), 255);
       }
     }
     c.putImageData(img, 0, 0);
@@ -708,7 +713,7 @@ roughnessFactor = clamp(roughnessFactor * (1.0 + uTriR * (0.25 - dot(triC, vec3(
       for (const z of [1, -1]) {
         const pts = [];
         for (let i = 0; i <= 12; i++) { const y = lerp(-6.4, 8.6, i / 12); pts.push(SP(HEAD, z * (FACE_W(y) + 2.6 * D), y, 0.15)); }
-        add(h, g.tube(pts, 0.34, 24, 6), LED);
+        add(h, g.tube(pts, (SKN && SKN.ledR) || 0.34, 24, 6), LED);
       }
       h.scale.setScalar(0.93);
       P.head = ctx.group(h);

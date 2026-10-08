@@ -14,7 +14,7 @@
   const CX = 650, PIT = -160, ZB = -1700, EZ = -540;      // centre, sol de la fosse, ligne des barrières, bord arrière du plateau
   const L0 = 1100, RC = 1100, THM = 1.25;                  // tribunes : demi-longueur de la partie droite, rayon des virages, angle max
   const UMAX = L0 + RC * THM;
-  const FOG = { color: 0x0a0818, near: 1700, far: 9800 };
+  const FOG = { color: 0x07061a, near: 1900, far: 10500 };
   const FONT = '"Russo One", "Arial Black", "Liberation Sans", sans-serif';
   const STAGE = [[-650, 900], [-650, -160], [-270, EZ], [1570, EZ], [1950, -160], [1950, 900]];
 
@@ -55,7 +55,7 @@
 
   ARENA3D.stadium = {
     light: {
-      hemi: [0x5a64a8, 0x0b0912, 0.42], key: [0xfff1e2, 1.75], keyPos: [-180, 1150, 430],
+      hemi: [0x5a64a8, 0x0b0912, 0.34], key: [0xfff1e2, 1.75], keyPos: [-180, 1150, 430],
       rims: [[0xff2bc8, 2.3, [1, 0.28, -0.75]], [0x1fd2ff, 2.3, [-1, 0.28, -0.75]], [0xffc46a, 0.7, [0, 1, 0.1]]],
       fog: FOG, bg: 0x040309, refl: 0.5, dim: 0.74
     },
@@ -107,7 +107,8 @@
         c.save(); c.translate(ex, ez);
         g = c.createRadialGradient(0, 0, er * 0.2, 0, 0, er); g.addColorStop(0, '#15171f'); g.addColorStop(1, '#0a0b0f');
         c.fillStyle = g; c.beginPath(); c.arc(0, 0, er, 0, 7); c.fill();
-        c.strokeStyle = '#8e95a6'; c.lineWidth = 9; c.beginPath(); c.arc(0, 0, er, 0, 7); c.stroke();
+        c.strokeStyle = '#5a606e'; c.lineWidth = 9; c.beginPath(); c.arc(0, 0, er, 0, 7); c.stroke();
+
         c.strokeStyle = '#5e6472'; c.lineWidth = 3; c.beginPath(); c.arc(0, 0, er - 26, 0, 7); c.stroke();
         c.beginPath(); c.arc(0, 0, er * 0.56, 0, 7); c.stroke();
         // graduations
@@ -123,7 +124,7 @@
         c.fillStyle = '#0a0b0f'; c.fillRect(-1500, -90, 3000, 180);
         c.strokeStyle = '#6f5a2c'; c.lineWidth = 6; c.strokeRect(-1500, -90, 3000, 180);
         c.font = `900 150px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillStyle = '#a9b0bf'; c.fillText('WORLD ROBOT LEAGUE', 0, 6);
+        c.fillStyle = '#5d6372'; c.fillText('WORLD ROBOT LEAGUE', 0, 6);
         c.restore();
         // texte arrière
         c.save(); c.translate(CX, -470); c.scale(0.55, 1);
@@ -201,17 +202,17 @@
           }
           c.restore();
         }
-        // contre-jour : bord des silhouettes éclairé (plus fort en haut)
-        const im = c.getImageData(0, 0, W, H), d = im.data, A = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : d[(y * W + x) * 4 + 3];
-        const out = new Uint8ClampedArray(d.length); out.set(d);
-        const OFF = [[-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, -2], [-2, 2], [2, 2]];
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-          const i = (y * W + x) * 4; if (d[i + 3] < 128) continue;
-          let e = 0; for (const [ox, oy] of OFF) if (A(x + ox, y + oy) < 128) e += oy < 0 ? 1.6 : 1;
-          const top = 1 - Math.min(1, (y % 256) / 200);
-          out[i] = Math.max(d[i], Math.min(255, e * 34 * (0.5 + top) + top * top * 70));
-        }
-        im.data.set(out); c.putImageData(im, 0, 0);
+        // contre-jour : bord des silhouettes éclairé (plus fort en haut), calculé par composition de calques (rapide)
+        const mk = () => { const cv = document.createElement('canvas'); cv.width = W; cv.height = H; return cv; };
+        const sil = mk(); sil.getContext('2d').drawImage(c.canvas, 0, 0);
+        const core = mk(), cc = core.getContext('2d');
+        cc.drawImage(sil, 0, 0); cc.globalCompositeOperation = 'destination-in';
+        cc.drawImage(sil, 0, 4); cc.drawImage(sil, 3, 1); cc.drawImage(sil, -3, 1); cc.drawImage(sil, 0, -2);
+        const rim = mk(), rc = rim.getContext('2d');
+        rc.drawImage(sil, 0, 0); rc.globalCompositeOperation = 'destination-out'; rc.drawImage(core, 0, 0);
+        rc.globalCompositeOperation = 'source-in';
+        for (let row = 0; row < 2; row++) { const g = rc.createLinearGradient(0, row * 256, 0, row * 256 + 256); g.addColorStop(0, 'rgb(255,0,0)'); g.addColorStop(0.45, 'rgb(170,0,0)'); g.addColorStop(1, 'rgb(60,0,0)'); rc.fillStyle = g; rc.fillRect(0, row * 256, W, 256); }
+        c.globalCompositeOperation = 'lighter'; c.drawImage(rim, 0, 0); c.globalCompositeOperation = 'source-over';
       }, { srgb: false });
 
       // --- bandes LED : 4 bandeaux 2048×128 (pubs A, pubs B, ruban, K.O.) ---
@@ -410,7 +411,7 @@
         for (let j = 0; j < us.length - 1; j++) {
           const a = cpt(us[j], r), b = cpt(us[j + 1], r), ua = arcAt(us[j], r) / h, ub = arcAt(us[j + 1], r) / h;
           const P = [[a[0], y0, a[1]], [b[0], y0, b[1]], [b[0], y1, b[1]], [a[0], y1, a[1]]], UV = [[ua, 0], [ub, 0], [ub, 1], [ua, 1]];
-          for (const k of [0, 2, 1, 0, 3, 2]) { pos.push(...P[k]); uv.push(...UV[k]); }
+          for (const k of [0, 1, 2, 0, 2, 3]) { pos.push(...P[k]); uv.push(...UV[k]); }
         }
         const g = new T.BufferGeometry();
         g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
@@ -472,17 +473,77 @@
       stat.add(S.mesh(stripAlong(US, FASCIA.r - 150 + 6, FASCIA.y0 + 92, FASCIA.y0 + 96), railMat));
       const exitMat = S.glow(0x2dff7a, 1.6);
       for (let s = -2200; s <= 2200; s += 900) { const r = FASCIA.r - 2, u = uFromArc(s + 450, r), p = cpt(u, r); stat.add(S.mesh(S.g.box(40, 16, 3), exitMat, { p: [p[0] - p[2] * 2, FASCIA.y1 - 14, p[1] - p[3] * 2], r: [0, Math.atan2(-p[2], -p[3]), 0] })); }
-      // --- grappes d'enceintes suspendues (cadrent les bords) ---
+      // --- écrans latéraux (cartes des combattants), sur pylônes dans la fosse : cadrent les bords ---
+      const SIDE = { x: [-380, 1680], y: 548, z: -1460, w: 520, h: 292, yaw: 0.42 };
+      const sideTex = S.canvasTex(2048, 1152, () => { }, { aniso: 4 });
+      const sdC = sideTex.image.getContext('2d');
+      function sdFrame(f, draw) { const x = (f % 2) * 1024, y = (f >> 1) * 576; sdC.save(); sdC.translate(x, y); sdC.beginPath(); sdC.rect(0, 0, 1024, 576); sdC.clip(); draw(sdC); sdC.restore(); }
+      function drawCard(f, tag, name, col, dark) {
+        sdFrame(f, c => {
+          let g = c.createLinearGradient(0, 0, 1024, 576); g.addColorStop(0, dark); g.addColorStop(1, '#020205'); c.fillStyle = g; c.fillRect(0, 0, 1024, 576);
+          c.save(); c.globalAlpha = 0.16; c.fillStyle = col; for (let i = -6; i < 14; i++) { c.beginPath(); c.moveTo(i * 90, 576); c.lineTo(i * 90 + 40, 576); c.lineTo(i * 90 + 340, 0); c.lineTo(i * 90 + 300, 0); c.fill(); } c.restore();
+          c.strokeStyle = col; c.lineWidth = 3; c.globalAlpha = 0.25;
+          for (let y = 0; y < 8; y++) for (let x = 0; x < 14; x++) { const cx = 560 + x * 34 + (y % 2) * 17, cy = 60 + y * 30; c.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; c[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * 14, cy + Math.sin(a) * 14); } c.closePath(); c.stroke(); }
+          c.globalAlpha = 1;
+          bigText(c, tag, 190, 200, 210, 'rgba(0,0,0,0)', col, col);
+          c.font = `900 210px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 6; c.strokeStyle = col; c.strokeText(tag, 190, 200);
+          bigText(c, name, 512, 410, 104, '#ffffff', null, col);
+          c.fillStyle = col; c.fillRect(70, 478, 884, 10);
+          c.font = `700 30px ${FONT}`; c.fillStyle = '#d8dce8'; c.textAlign = 'left'; c.fillText('WORLD ROBOT LEAGUE  ·  GRANDE FINALE', 72, 528);
+          c.textAlign = 'right'; c.fillStyle = col; c.fillText('● EN DIRECT', 952, 528);
+          c.textAlign = 'left'; c.font = `900 44px ${FONT}`; c.fillStyle = '#ffffff'; c.fillText('ENGINE', 470, 120); c.fillStyle = col; c.fillText('CHAMPIONSHIP', 470, 172);
+        });
+      }
+      function drawSideNames(a, b) { drawCard(0, 'P1', a, '#19d6ff', '#04263a'); drawCard(1, 'P2', b, '#ff2bd0', '#3a0430'); sideTex.needsUpdate = true; }
+      sdFrame(2, c => {
+        const g = c.createRadialGradient(512, 288, 10, 512, 288, 620); g.addColorStop(0, '#2a1a04'); g.addColorStop(1, '#030206'); c.fillStyle = g; c.fillRect(0, 0, 1024, 576);
+        rays(c, 512, 288, '#ffb02e', 28, 0.1);
+        c.strokeStyle = '#ffb02e'; c.lineWidth = 8; c.beginPath(); c.arc(512, 250, 150, 0, 7); c.stroke();
+        c.fillStyle = '#ffcf6a'; c.beginPath();
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? 46 : 112; c[i ? 'lineTo' : 'moveTo'](512 + Math.cos(a) * rr, 250 + Math.sin(a) * rr); }
+        c.closePath(); c.fill();
+        bigText(c, 'WORLD ROBOT LEAGUE', 512, 456, 62, '#ffffff', null, '#19d6ff');
+        bigText(c, 'FINALE MONDIALE 2026', 512, 522, 36, '#ffcf6a', null, null);
+      });
+      sdFrame(3, c => {
+        const g = c.createRadialGradient(512, 288, 20, 512, 288, 650); g.addColorStop(0, '#6a0c00'); g.addColorStop(1, '#0a0000'); c.fillStyle = g; c.fillRect(0, 0, 1024, 576);
+        rays(c, 512, 288, '#ff6a1a', 20, 0.25);
+        bigText(c, 'K.O.', 512, 300, 250, goldGrad(c, 180, 420), '#3a0600', '#ff3a10');
+      });
+      drawSideNames('JOUEUR 1', 'JOUEUR 2');
+      const sideMat = new T.ShaderMaterial({
+        uniforms: { uMap: { value: sideTex }, uT, uDim, uA0: { value: 0 }, uB0: { value: 0 }, uA1: { value: 1 }, uB1: { value: 1 }, uMix: { value: 1 }, uBright: { value: 1.15 } },
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: `uniform sampler2D uMap; uniform float uT, uA0, uB0, uA1, uB1, uMix, uBright, uDim; varying vec2 vUv;
+          vec2 fr(float f, vec2 uv){ return vec2((mod(f, 2.0) + uv.x) * 0.5, (1.0 - floor(f / 2.0)) * 0.5 + uv.y * 0.5); }
+          void main(){
+            float sd = step(1.0, vUv.x);
+            vec2 uv = clamp(vec2(vUv.x - sd, vUv.y), 0.003, 0.997);
+            float fa = mix(uA0, uA1, sd), fb = mix(uB0, uB1, sd);
+            vec3 a = texture2D(uMap, fr(fa, uv)).rgb, b = texture2D(uMap, fr(fb, uv)).rgb;
+            float e = 1.0 - uv.y;
+            float w = smoothstep(uMix - 0.03, uMix + 0.03, e);
+            vec3 c = mix(b, a, w) + vec3(0.7, 0.85, 1.0) * exp(-pow((e - uMix) * 30.0, 2.0)) * step(uMix, 0.999);
+            vec2 px = fract(uv * vec2(260.0, 146.0)); c *= 0.78 + 0.22 * smoothstep(0.0, 0.25, px.x) * smoothstep(0.0, 0.25, px.y);
+            c *= 0.94 + 0.06 * sin(uv.y * 30.0 + uT * 4.0);
+            gl_FragColor = vec4(c * uBright * uDim, 1.0);
+          }`
+      });
       {
-        const spk = S.mat({ color: 0x101116, roughness: 0.6, metalness: 0.4 }), grill = S.mat({ color: 0x050506, roughness: 0.95 });
-        for (const sx of [-380, 1680]) {
-          for (let i = 0; i < 9; i++) {
-            const y = 760 - i * 52, tilt = i * 0.035;
-            stat.add(S.mesh(S.g.box(150, 46, 110), spk, { p: [sx, y, -1050 + i * 4], r: [tilt, 0, 0] }));
-            stat.add(S.mesh(S.g.box(136, 34, 4), grill, { p: [sx, y, -995 + i * 6], r: [tilt, 0, 0] }));
-          }
-          stat.add(S.mesh(S.g.cyl(2, 2, 900, 6), spk, { p: [sx - 60, 1230, -1050] })); stat.add(S.mesh(S.g.cyl(2, 2, 900, 6), spk, { p: [sx + 60, 1230, -1050] }));
-        }
+        const pos = [], uv = [], sg = S.group(), metal = S.mat({ color: 0x0e0f14, roughness: 0.45, metalness: 0.7 }), trim = S.glow(0x8fe8ff, 1.3);
+        SIDE.x.forEach((sx, k) => {
+          const yaw = k ? -SIDE.yaw : SIDE.yaw, ca = Math.cos(yaw), sa = Math.sin(yaw), hw = SIDE.w / 2, hh = SIDE.h / 2;
+          const loc = (lx, ly, lz) => [sx + lx * ca + lz * sa, SIDE.y + ly, SIDE.z - lx * sa + lz * ca];
+          const P = [loc(-hw, -hh, 1), loc(hw, -hh, 1), loc(hw, hh, 1), loc(-hw, hh, 1)], UV = [[k, 0], [k + 1, 0], [k + 1, 1], [k, 1]];
+          for (const i of [0, 1, 2, 0, 2, 3]) { pos.push(...P[i]); uv.push(...UV[i]); }
+          sg.add(S.mesh(S.g.box(SIDE.w + 26, SIDE.h + 26, 22), metal, { p: [sx - sa * 12, SIDE.y, SIDE.z - ca * 12], r: [0, yaw, 0] }));
+          sg.add(S.mesh(S.g.box(SIDE.w + 26, 3, 3), trim, { p: [sx + sa * 0.5, SIDE.y - hh - 13, SIDE.z + ca * 0.5], r: [0, yaw, 0] }));
+          for (const lx of [-hw * 0.6, hw * 0.6]) { const q = loc(lx, 0, -14); sg.add(S.mesh(S.g.box(22, SIDE.y - hh - PIT, 22), metal, { p: [q[0], (PIT + SIDE.y - hh) / 2, q[2]], r: [0, yaw, 0] })); }
+          for (const lx of [-hw * 0.8, hw * 0.8]) { const q = loc(lx, 0, -6); sg.add(S.mesh(S.g.cyl(2, 2, 1200, 6), metal, { p: [q[0], SIDE.y + hh + 600, q[2]] })); }
+        });
+        const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
+        const sm = S.mesh(g, sideMat); sm.userData.noMerge = true; root.add(sm);
+        stat.add(sg);
       }
       // --- écran géant : structure ---
       const jbScreenMat = new T.ShaderMaterial({
@@ -544,8 +605,8 @@
       root.add(S.merge(stat));
 
       // --- barrières LED (bord des tribunes) et ruban de la coursive ---
-      const boardMat = ledMat({ row: 0, speed: 0.035, bright: 1.05, panel: 4 });
-      const boards = S.mesh(stripAlong(US, -1, PIT, -40), boardMat); boards.userData.noMerge = true; root.add(boards);
+      const boardMat = ledMat({ row: 0, speed: 0.035, bright: 0.8, panel: 4 });
+      const boards = S.mesh(stripAlong(US, -1, PIT, -6), boardMat); boards.userData.noMerge = true; root.add(boards);
       const ribbonMat = ledMat({ row: 2, speed: -0.02, bright: 1.15 });
       const ribbon = S.mesh(stripAlong(US, FASCIA.r - 1, FASCIA.y0 + 16, FASCIA.y1 - 18), ribbonMat); ribbon.userData.noMerge = true; root.add(ribbon);
 
@@ -573,7 +634,7 @@
         for (let i = 0; i < 22; i++) {
           const x = -420 + i * 100 + (rnd() - 0.5) * 50;
           if (x > 1720) break;
-          fans.push([x, PIT + 34, EZ - 90 - rnd() * 90, rnd(), 6.5 + (rnd() < 0.4 ? 1 : 0), 0.0, 9]);
+          fans.push([x, PIT + 6 + rnd() * 12, EZ - 90 - rnd() * 90, rnd(), 6.5 + (rnd() < 0.4 ? 1 : 0), 0.0, 9]);
         }
       }
       const NF = fans.length;
@@ -581,13 +642,14 @@
         uniforms: Object.assign({
           uMap: { value: crowdTex }, uT, uExc, uCam, uWave: { value: 0 }, uWaveX: { value: -9 },
           uB: { value: Array.from({ length: 8 }, () => new T.Vector4(0, -9999, 0, 1)) }, uBC: { value: Array.from({ length: 8 }, () => new T.Vector3()) },
-          uAmb: { value: new T.Vector3(0.016, 0.018, 0.034) }, uSpL: { value: new T.Vector3(0.0, 0.11, 0.17) }, uSpR: { value: new T.Vector3(0.17, 0.02, 0.13) },
-          uJP: { value: new T.Vector3(JB.x, JB.yb, JB.z) }, uJC: { value: new T.Vector3(0.10, 0.08, 0.05) }
+          uAmb: { value: new T.Vector3(0.0045, 0.005, 0.011) }, uSpL: { value: new T.Vector3(0.0, 0.02, 0.036) }, uSpR: { value: new T.Vector3(0.036, 0.004, 0.027) },
+          uRimC: { value: new T.Vector3(0.014, 0.016, 0.042) }, uFlash: { value: 0 },
+          uJP: { value: new T.Vector3(JB.x, JB.yb, JB.z) }, uJC: { value: new T.Vector3(0.06, 0.045, 0.03) }
         }, FOGU),
         vertexShader: `${FOG_V}
-          uniform float uT, uExc, uWave, uWaveX; uniform vec3 uCam, uAmb, uSpL, uSpR, uJP, uJC; uniform vec4 uB[8]; uniform vec3 uBC[8];
+          uniform float uT, uExc, uWave, uWaveX, uFlash; uniform vec3 uCam, uAmb, uSpL, uSpR, uJP, uJC, uRimC; uniform vec4 uB[8]; uniform vec3 uBC[8];
           attribute vec3 iPos; attribute vec4 iRnd;
-          varying vec2 vUv; varying vec3 vL; varying vec3 vShirt;
+          varying vec2 vUv; varying vec3 vL; varying vec3 vR; varying vec3 vShirt;
           vec3 pal(float k){
             if (k < 0.34) return vec3(0.10, 0.11, 0.14);
             if (k < 0.48) return vec3(0.15, 0.75, 1.0);
@@ -615,23 +677,26 @@
             gl_Position = projectionMatrix * mv;
             vFog = smoothstep(uFogN, uFogF, -mv.z);
             vUv = vec2((cell + uv.x) / 8.0, (1.0 - up) * 0.5 + uv.y * 0.5);
-            // éclairage de la foule : ambiance, débord du plateau, écran géant, poursuites
+            // éclairage de la foule (dans la pénombre) : ambiance, débord du plateau sur les premiers rangs, écran géant,
+            // poursuites qui balaient les gradins (seules vraies sources fortes), flashs du K.O.
             float h = iPos.y + 150.0;
-            vec3 L = uAmb;
-            L += mix(uSpL, uSpR, smoothstep(150.0, 1150.0, iPos.x)) * exp(-h / 240.0);
-            L += uJC * exp(-distance(iPos, uJP) / 800.0);
-            vec3 hp = iPos + vec3(0.0, 110.0, 0.0);
-            for (int i = 0; i < 8; i++) { float d = distance(hp, uB[i].xyz); L += uBC[i] * (1.0 - smoothstep(uB[i].w * 0.3, uB[i].w, d)); }
-            L *= mix(1.0, 0.4, smoothstep(0.0, 1100.0, h)) * (1.0 + uExc * 0.35);
-            if (photo) L = vec3(0.02, 0.022, 0.03);
+            vec3 spill = mix(uSpL, uSpR, smoothstep(150.0, 1150.0, iPos.x)) * exp(-h / 200.0);
+            vec3 L = (uAmb + spill) * mix(1.0, 0.35, smoothstep(0.0, 1200.0, h));
+            L += uJC * exp(-distance(iPos, uJP) / 650.0);
+            vec3 hp = iPos + vec3(0.0, 110.0, 0.0), B = vec3(0.0);
+            for (int i = 0; i < 8; i++) { float d = distance(hp, uB[i].xyz); B += uBC[i] * (1.0 - smoothstep(uB[i].w * 0.3, uB[i].w, d)); }
+            float fl = uFlash * step(0.55, fract(iRnd.x * 31.7 + floor(uT * 9.0) * 0.37));
+            L = L * (1.0 + uExc * 0.4) + B + vec3(fl * 0.25);
+            vR = uRimC * mix(1.0, 0.45, smoothstep(0.0, 1300.0, h)) + spill * 0.7 + B * 0.8 + vec3(fl * 0.3);
+            if (photo) { L = vec3(0.003, 0.0035, 0.005) + spill * 0.4; vR = mix(vec3(0.0, 0.12, 0.2), vec3(0.2, 0.02, 0.14), smoothstep(300.0, 1000.0, iPos.x)) * 0.35; }
             vL = L;
             vShirt = pal(fract(iRnd.x * 17.3 + en * 3.1));
           }`,
-        fragmentShader: `${FOG_F} uniform sampler2D uMap; varying vec2 vUv; varying vec3 vL; varying vec3 vShirt;
+        fragmentShader: `${FOG_F} uniform sampler2D uMap; varying vec2 vUv; varying vec3 vL; varying vec3 vR; varying vec3 vShirt;
           void main(){
             vec4 tx = texture2D(uMap, vUv);
             if (tx.a < 0.42) discard;
-            vec3 c = vL * (0.3 + 3.2 * tx.r) * mix(vec3(1.0), vShirt * 1.6, tx.g * 0.9) + vL * tx.b * 4.0;
+            vec3 c = vL * mix(0.16, 0.8, tx.g) * mix(vec3(1.0), vShirt * 1.2, tx.g * 0.85) + vL * tx.b * 2.0 + vR * tx.r * 1.7;
             gl_FragColor = vec4(mix(c, uFogC, vFog), 1.0);
           }`
       });
@@ -738,15 +803,28 @@
       for (let i = 0; i < 4; i++) pools.setColorAt(i, COL.wh);
       root.add(pools);
 
-      /* ---------- lasers ---------- */
-      const NL = 12;
-      const laserGeo = new T.CylinderGeometry(1, 1, 1, 5, 1, true); laserGeo.translate(0, 0.5, 0);
-      const laserMat = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, blending: T.AdditiveBlending, fog: false, toneMapped: false });
+      /* ---------- lasers : depuis le dessous de l'écran géant et le haut des écrans latéraux, vers les gradins hauts
+         (toujours au-dessus de la tête des combattants à l'image) ---------- */
+      const NL = 16;
+      const laserGeo = new T.CylinderGeometry(1, 1, 1, 4, 1, true); laserGeo.translate(0, 0.5, 0);
+      const laserMat = new T.ShaderMaterial({
+        uniforms: { uDim },
+        vertexShader: 'varying float vA; varying vec3 vCol; void main(){ vA = position.y; vCol = instanceColor; gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'uniform float uDim; varying float vA; varying vec3 vCol; void main(){ float f = smoothstep(0.0, 0.015, vA) * (1.0 - 0.55 * vA); gl_FragColor = vec4(vCol * f * uDim, 1.0); }',
+        transparent: true, depthWrite: false, blending: T.AdditiveBlending
+      });
       const lasers = new T.InstancedMesh(laserGeo, laserMat, NL);
       lasers.frustumCulled = false; lasers.userData.noMerge = true; lasers.renderOrder = -1.4;
       for (let i = 0; i < NL; i++) lasers.setColorAt(i, COL.cy);
       root.add(lasers);
-      const LEMIT = [[-270, 40, EZ - 20], [1570, 40, EZ - 20]];
+      const LEMIT = [[CX - 268, JB.yb - 8, JB.z + 268], [CX + 268, JB.yb - 8, JB.z + 268], [SIDE.x[0] + 60, SIDE.y + SIDE.h / 2 + 30, SIDE.z + 30], [SIDE.x[1] - 60, SIDE.y + SIDE.h / 2 + 30, SIDE.z + 30]];
+      // têtes de projection laser (petites lueurs)
+      {
+        const lh = S.glow(0xffffff, 2.2), hg = S.group();
+        LEMIT.forEach(e => hg.add(S.mesh(S.g.sphere(7, 10, 8), lh, { p: e })));
+        root.add(S.merge(hg));
+
+      }
 
       /* ---------- brume ---------- */
       const hazeTex = S.canvasTex(256, 256, (c) => {
@@ -769,9 +847,9 @@
         transparent: true, depthWrite: false, blending: T.AdditiveBlending
       });
       const hz = [
-        [[CX, 40, -700], [4600, 420], 0x5a3c9a, 0.5, [6, 0.6], 0.012],
-        [[CX, 300, -1640], [6800, 1000], 0x3c3a8c, 0.42, [7, 1.0], 0.008],
-        [[CX, 800, -2900], [9000, 1700], 0x2a2a6a, 0.45, [6, 1.1], 0.005]
+        [[CX, 40, -760], [4600, 360], 0x4a2c8a, 0.3, [6, 0.6], 0.012],
+        [[CX, 300, -1640], [6800, 1000], 0x2c2a6c, 0.2, [7, 1.0], 0.008],
+        [[CX, 800, -2900], [9000, 1700], 0x22225a, 0.26, [6, 1.1], 0.005]
       ];
       hz.slice(0, Q >= 2 ? 2 : 3).forEach(([p, s, col, o, sc, sp]) => { const m = S.mesh(new T.PlaneGeometry(s[0], s[1]), hazeMat(col, o, sc[0], sc[1], sp), { p }); m.userData.noMerge = true; m.renderOrder = -1.2; root.add(m); });
 
@@ -844,7 +922,7 @@
         if (F && F !== lastF) { lastF = F; inT0 = t; }
         if (F && F.p && F.p.length > 1) {
           const k = F.p[0].ch.name + '|' + F.p[1].ch.name;
-          if (k !== nameKey) { nameKey = k; drawNames(F.p[0].ch.name, F.p[1].ch.name, '#19d6ff', '#ff2bd0'); jbTex.needsUpdate = true; }
+          if (k !== nameKey) { nameKey = k; drawNames(F.p[0].ch.name, F.p[1].ch.name, '#19d6ff', '#ff2bd0'); jbTex.needsUpdate = true; drawSideNames(F.p[0].ch.name, F.p[1].ch.name); }
         }
         const tk = koT0 >= 0 ? t - koT0 : 99;
         uKo.value = tk; uIn.value = inT0 >= 0 ? t - inT0 - 0.6 : 99;
@@ -858,10 +936,22 @@
         if (ko) { jbScreenMat.uniforms.uA.value = JSEQ[Math.floor(koT0 / 5.5) % 4]; jbScreenMat.uniforms.uB.value = 3; jbScreenMat.uniforms.uMix.value = Math.min(1, tk / 0.35); }
         else { jbScreenMat.uniforms.uA.value = JSEQ[(slot + 3) % 4]; jbScreenMat.uniforms.uB.value = JSEQ[slot % 4]; jbScreenMat.uniforms.uMix.value = Math.min(1, (t - slot * 5.5) / 0.6); }
         jbScreenMat.uniforms.uBright.value = 1.2 + (ko ? 0.5 * (0.5 + 0.5 * Math.sin(t * 18)) : 0);
+        // écrans latéraux : carte du combattant / logo, carte du combattant en SUPER, K.O.
+        {
+          const U = sideMat.uniforms, s6 = Math.floor(t / 6.5), sbI = info.superBy && F && F.p ? F.p.indexOf(info.superBy) : -1;
+          if (ko) { U.uA0.value = U.uA1.value = 3; U.uMix.value = Math.min(1, tk / 0.4); }
+          else if (sbI >= 0) { U.uA0.value = U.uA1.value = sbI; U.uMix.value = 1; }
+          else {
+            const f0 = s6 % 2 ? 2 : 0, f1 = s6 % 2 ? 1 : 2, p0 = (s6 + 1) % 2 ? 2 : 0, p1 = (s6 + 1) % 2 ? 1 : 2;
+            U.uA0.value = f0; U.uA1.value = f1; U.uB0.value = p0; U.uB1.value = p1; U.uMix.value = Math.min(1, (t - s6 * 6.5) / 0.7);
+          }
+          U.uBright.value = 1.1 + (ko ? 0.4 * (0.5 + 0.5 * Math.sin(t * 18)) : 0);
+        }
+
         // bandes LED : alternance des pubs, K.O. au K.O.
         const bslot = Math.floor(t / 8);
         if (ko) { boardMat.uniforms.uRowA.value = bslot % 2; boardMat.uniforms.uRowB.value = 3; boardMat.uniforms.uMix.value = Math.min(1.1, tk / 0.5); boardMat.uniforms.uBright.value = 1.2 + 0.5 * (Math.sin(t * 16) > 0 ? 1 : 0); }
-        else { boardMat.uniforms.uRowA.value = (bslot + 1) % 2; boardMat.uniforms.uRowB.value = bslot % 2; boardMat.uniforms.uMix.value = Math.min(1.1, (t - bslot * 8) / 0.8); boardMat.uniforms.uBright.value = 1.05; }
+        else { boardMat.uniforms.uRowA.value = (bslot + 1) % 2; boardMat.uniforms.uRowB.value = bslot % 2; boardMat.uniforms.uMix.value = Math.min(1.1, (t - bslot * 8) / 0.8); boardMat.uniforms.uBright.value = 0.8; }
         edgeMat.uniforms.uKo.value = ko ? Math.max(0, 1 - tk / 3) : 0;
         // poursuites
         const sb = info.superBy, wx = winnerX(F);
@@ -877,7 +967,7 @@
           } else {
             const u = b.u0 + Math.sin(t * 0.21 + b.ph) * 900, row = 6 + 8 * (0.5 + 0.5 * Math.sin(t * 0.37 + b.ph * 1.7));
             const rr = rowAt(row), p = cpt(Math.max(-UMAX, Math.min(UMAX, u)), rr[0]);
-            tx = p[0]; tz = p[1]; ty = rr[1] + 100; R = 260; I = 0.24;
+            tx = p[0]; tz = p[1]; ty = rr[1] + 100; R = 260; I = 0.2;
           }
           V3.set(tx - b.a[0], ty - b.a[1], tz - b.a[2]); const len = V3.length(); V3.multiplyScalar(1 / len);
           QT.setFromUnitVectors(DOWN, V3); SC.set(R, len, R); V3b.set(b.a[0], b.a[1], b.a[2]);
@@ -888,7 +978,8 @@
           const ii = I * (0.85 + 0.15 * Math.sin(t * 2 + i));
           TC2.copy(TC).multiplyScalar(ii); beams.setColorAt(i, TC2);
           const U = crowdMat.uniforms;
-          if (!b.stage && !ko && !sb) { U.uB.value[i].set(tx, ty, tz, R * 1.5); U.uBC.value[i].set(TC.r, TC.g, TC.b).multiplyScalar(0.9); }
+          if (!b.stage && !ko && !sb) { U.uB.value[i].set(tx, ty, tz, R * 1.5); U.uBC.value[i].set(TC.r, TC.g, TC.b).multiplyScalar(0.6); }
+
           else U.uBC.value[i].set(0, 0, 0);
           if (b.stage && pi < 4) {
             M4.compose(V3b.set(tx, 0.9, tz), QT.identity(), SC.set(R * 1.15, 1, R * 1.15)); pools.setMatrixAt(pi, M4);
@@ -897,18 +988,21 @@
         }
         beams.instanceMatrix.needsUpdate = true; beams.instanceColor.needsUpdate = true;
         pools.instanceMatrix.needsUpdate = true; pools.instanceColor.needsUpdate = true;
-        // lasers : salves régulières, en continu pendant le K.O.
-        const lc = t % 15, lon = ko ? 1 : Math.min(1, lc / 0.3) * Math.min(1, Math.max(0, (3.6 - lc) / 0.4)) * (lc < 3.6 ? 1 : 0);
+        // lasers : salves régulières, pendant les SUPER (couleur du combattant) et en continu pendant le K.O.
+        const lc = t % 15, lon = (ko || sb) ? 1 : Math.min(1, lc / 0.3) * Math.min(1, Math.max(0, (3.6 - lc) / 0.4)) * (lc < 3.6 ? 1 : 0);
+        const ls = ko ? 2.2 : 1;
         for (let i = 0; i < NL; i++) {
-          const e = LEMIT[i < NL / 2 ? 0 : 1], k = i % (NL / 2), side = i < NL / 2 ? 1 : -1;
-          const az = side * (0.15 + k * 0.17 + 0.25 * Math.sin(t * 1.4 + k * 0.5)), el = 0.12 + 0.1 * Math.sin(t * 0.9 + k);
-          V3.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
-          // jusqu'aux gradins (plan incliné approché)
-          const num = -150 - 0.5176 * (e[2] + 1714) - e[1], den = V3.y + 0.5176 * V3.z;
-          const len = den < -1e-3 ? Math.min(7000, num / den) : 7000;
-          QT.setFromUnitVectors(UP, V3); SC.set(lon > 0.01 ? 2.2 : 0.001, Math.max(1, len), lon > 0.01 ? 2.2 : 0.001); V3b.set(e[0], e[1], e[2]);
+          const ei = i >> 2, e = LEMIT[ei], k = i & 3, sd = ei % 2 ? 1 : -1;
+          let u, row;
+          if (ei < 2) { u = sd * (250 + k * 480 + 360 * Math.sin(t * (0.8 + 0.25 * k) * ls + k * 1.7 + ei)); row = 13 + 10 * (0.5 + 0.5 * Math.sin(t * (1.1 + 0.2 * k) * ls + k * 2.1 + ei * 3.0)); }
+          else { u = -sd * (-500 + k * 520 + 420 * Math.sin(t * (0.7 + 0.2 * k) * ls + k * 1.3 + ei)); row = 12 + 11 * (0.5 + 0.5 * Math.sin(t * (0.9 + 0.15 * k) * ls + k * 1.9 + ei)); }
+          const rr = rowAt(row), p = cpt(Math.max(-UMAX, Math.min(UMAX, u)), rr[0]);
+          V3.set(p[0] - e[0], rr[1] + 130 - e[1], p[1] - e[2]); const len = V3.length(); V3.multiplyScalar(1 / len);
+          const wd = lon > 0.01 ? 3.2 : 0.001;
+          QT.setFromUnitVectors(UP, V3); SC.set(wd, len, wd); V3b.set(e[0], e[1], e[2]);
           M4.compose(V3b, QT, SC); lasers.setMatrixAt(i, M4);
-          TC.copy(i % 2 ? COL.cy : COL.mg); if (ko && i % 3 === 0) TC.copy(COL.gd); TC.multiplyScalar(3.2 * lon * uDim.value); lasers.setColorAt(i, TC);
+          TC.copy(i % 2 ? COL.cy : COL.mg); if (ko && i % 3 === 0) TC.copy(COL.gd); if (sb && sb.ch && !ko) TC.set(sb.ch.accent);
+          TC.multiplyScalar(3.0 * lon); lasers.setColorAt(i, TC);
         }
         lasers.instanceMatrix.needsUpdate = true; lasers.instanceColor.needsUpdate = true;
       }

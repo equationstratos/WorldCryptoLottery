@@ -71,21 +71,26 @@ if (typeof RK !== 'undefined' && RK) RK.models.atlas = function (ctx) {
         return [s * (hor ? 0.9 : 0.35), 0, 0];
       });
     } else if (kind === 'cracks') { // basalte fissuré : R = roche brûlée autour des fissures, G = mouchetures, B = lave
+      // Voronoï déformé (fissures sinueuses), largeur et chaleur variables le long des fissures (zones refroidies / incandescentes)
       const v1 = voro(5, 99), v2 = voro(11, 4242, 0.95), nz = vnoise(5, 5, 777), nz2 = vnoise(16, 16, 31), nz3 = vnoise(9, 9, 5150);
+      const wa = vnoise(6, 6, 61), wb = vnoise(6, 6, 62), wc = vnoise(22, 22, 63), wd = vnoise(22, 22, 64), nw = vnoise(13, 13, 909);
       put((x, y) => {
-        const e1 = v1(x, y), e2 = v2(x, y), k = 0.35 + 0.65 * sstep(0.25, 0.7, nz(x, y));
-        const core = 1 - sstep(1.2, 4.2, e1), hot = 1 - sstep(0, 1.6, e1), halo = Math.exp(-e1 / 9);
-        const sec = (1 - sstep(0.6, 2.4, e2)) * sstep(0.55, 0.75, nz3(x, y));
+        const X = x + (wa(x, y) - 0.5) * 40 + (wc(x, y) - 0.5) * 9, Y = y + (wb(x, y) - 0.5) * 40 + (wd(x, y) - 0.5) * 9;
+        const e1 = v1(X, Y), e2 = v2(X, Y);
+        const heat = sstep(0.3, 0.68, nz(x, y) * 0.6 + nz3(x, y) * 0.4), w = 0.6 + 1.5 * nw(x, y);
+        const core = 1 - sstep(0.7 * w, 3 * w, e1), hot = 1 - sstep(0, 1.3 * w, e1), halo = Math.exp(-e1 / (5 + 9 * heat));
+        const sec = (1 - sstep(0.4, 1.9, e2)) * sstep(0.48, 0.7, nz3(x, y));
         const spk = sstep(0.6, 0.85, nz2(x, y) * 0.7 + nz(x * 3 % n, y * 3 % n) * 0.3);
-        return [Math.min(1, halo * 0.55 * k + core * 0.8), spk * 0.7 * (1 - halo), Math.min(1, core * k * 0.75 + hot * k * 0.25 + sec * 0.45 * k + halo * 0.1 * k)];
+        return [Math.min(1, halo * 0.6 * (0.35 + 0.65 * heat) + core * 0.85), spk * 0.7 * (1 - halo),
+          Math.min(1, core * (0.1 + 0.9 * heat) * 0.8 + hot * heat * 0.32 + sec * 0.5 * (0.15 + 0.85 * heat) + halo * 0.12 * heat)];
       });
-    } else if (kind === 'patina') { // vert-de-gris : plaques + coulures verticales (R), oxydation sombre (G)
-      const n1 = vnoise(6, 6, 11), n2 = vnoise(14, 14, 23), n3 = vnoise(40, 3, 57), n4 = vnoise(9, 9, 91), gr = vnoise(64, 64, 7), gr2 = vnoise(128, 128, 3);
+    } else if (kind === 'patina') { // vert-de-gris : plaques poudreuses à bord déchiqueté + coulures (R), liseré de cuivre oxydé sombre (G)
+      const n1 = vnoise(5, 5, 11), n2 = vnoise(12, 12, 23), n3 = vnoise(48, 4, 57), n4 = vnoise(9, 9, 91), gr = vnoise(64, 64, 7), gr2 = vnoise(128, 128, 3);
       put((x, y) => {
-        const f = n1(x, y) * 0.5 + n2(x, y) * 0.3 + n4(x, y) * 0.2, dr = n3(x, y), grain = gr(x, y) * 0.6 + gr2(x, y) * 0.4;
-        const v = sstep(0.6, 0.76, f + (dr - 0.5) * 0.28) * sstep(0.25, 0.65, grain);
-        const o = sstep(0.42, 0.7, n4(x, y) * 0.5 + n2(x, y) * 0.5) * (1 - v);
-        return [v * 0.9, o * 0.55, 0];
+        const f = n1(x, y) * 0.5 + n2(x, y) * 0.3 + n4(x, y) * 0.2, grain = gr(x, y) * 0.6 + gr2(x, y) * 0.4;
+        const t = f + (n3(x, y) - 0.5) * 0.3 + (grain - 0.5) * 0.15;
+        const v = sstep(0.57, 0.66, t), o = sstep(0.47, 0.6, t) * (1 - v);
+        return [v * 0.95, o * 0.75, 0];
       });
     } else if (kind === 'holes') { // perforations (même maillage que la grille du kit) : R = trou sombre, B = lueur du trou
       put((x, y) => {
@@ -127,6 +132,37 @@ if (typeof RK !== 'undefined' && RK) RK.models.atlas = function (ctx) {
     U.patE.base = U.patE.value.clone();
     return ctx.mat(Object.assign({}, p, { userData: { pat: U }, customProgramCacheKey: patKey, onBeforeCompile: (sh) => patInject(sh, U) }));
   };
+  // décalcomanies (canvas transparent, cache module) posées sur une fine plaque (g.box : UV 0..1 sur la face +Z).
+  // Motifs symétriques gauche/droite uniquement : le modèle est mis en miroir quand le robot regarde à gauche.
+  const DTX = self._dtx || (self._dtx = {});
+  const dtex = (kind) => {
+    if (DTX[kind]) return DTX[kind];
+    const n = 256, cv = document.createElement('canvas'); cv.width = cv.height = n;
+    const c = cv.getContext('2d');
+    c.clearRect(0, 0, n, n); c.lineJoin = 'round';
+    if (kind === 'warn') { // panneau « danger » : triangle + point d'exclamation
+      c.fillStyle = '#fff';
+      c.beginPath(); c.moveTo(128, 14); c.lineTo(246, 226); c.lineTo(10, 226); c.closePath(); c.fill();
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath(); c.moveTo(128, 64); c.lineTo(206, 202); c.lineTo(50, 202); c.closePath(); c.fill();
+      c.globalCompositeOperation = 'source-over';
+      c.beginPath(); c.moveTo(118, 96); c.lineTo(138, 96); c.lineTo(133, 160); c.lineTo(123, 160); c.closePath(); c.fill();
+      c.beginPath(); c.arc(128, 180, 10, 0, 7); c.fill();
+    } else if (kind === 'deco') { // filet art déco (cadre à double trait + losange central), pour les finitions précieuses
+      c.strokeStyle = '#fff'; c.fillStyle = '#fff';
+      c.lineWidth = 9; c.strokeRect(10, 10, n - 20, n - 20);
+      c.lineWidth = 4; c.strokeRect(30, 30, n - 60, n - 60);
+      c.beginPath(); c.moveTo(128, 58); c.lineTo(170, 128); c.lineTo(128, 198); c.lineTo(86, 128); c.closePath(); c.lineWidth = 6; c.stroke();
+      c.beginPath(); c.moveTo(128, 92); c.lineTo(148, 128); c.lineTo(128, 164); c.lineTo(108, 128); c.closePath(); c.fill();
+      for (const [x, y] of [[30, 30], [226, 30], [30, 226], [226, 226]]) { c.beginPath(); c.arc(x, y, 9, 0, 7); c.fill(); }
+      for (const s of [1, -1]) { c.beginPath(); c.moveTo(128 + s * 52, 128); c.lineTo(128 + s * 98, 128); c.lineWidth = 4; c.stroke(); }
+    }
+    const t = new T.CanvasTexture(cv); t.anisotropy = 4;
+    return (DTX[kind] = t);
+  };
+  // matériau de décalcomanie : couleur = color (le canvas, blanc sur transparent, sert de masque alpha)
+  const decalMat = (kind, p) => ctx.mat(Object.assign({ color: 0x0c0c0e, alphaMap: dtex(kind), alphaTest: 0.5, roughness: 0.35, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.12,
+    envMapIntensity: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }, p));
 
   /* ---------------- matériaux ---------------- */
   // skin choisi (null = skin d'origine 'classic' : matériaux strictement identiques à la version de référence)
@@ -594,25 +630,41 @@ if (typeof RK !== 'undefined' && RK) RK.models.atlas = function (ctx) {
   const pulsePat = (k) => { for (const m of patMats) m.userData.pat.patE.value.copy(m.userData.pat.patE.base).multiplyScalar(k); };
   if (SK && !lo && !ctx.override) {
     const sid = ctx.skin;
-    if (sid === 'furtif') { // filets lumineux rouges qui soulignent la silhouette
-      const lg = ctx.glow(0xff1830, 2.6);
+    // filets qui soulignent la silhouette (lumineux en FURTIF, or poli en NACRE)
+    const pinstripes = (lm) => {
       DX.torso = (t) => {
         const chestTaper = v => { const u = Math.min(1, Math.max(0, (v[1] - 27) / 25)); v[2] *= 0.86 + 0.14 * u * (2 - u); };
         add(t, deform('fxFurChest', () => [
           [g.box(0.55, 20, 0.3), [8.1, 44.5, 16.95]], [g.box(0.55, 20, 0.3), [8.1, 44.5, -16.95]],
           [g.box(0.3, 25.5, 0.55), [12.98, 43.6, 11.75], [0.054, 0, 0]], [g.box(0.3, 25.5, 0.55), [12.98, 43.6, -11.75], [-0.054, 0, 0]],
           [g.box(14, 0.5, 0.3), [-4.5, 33.6, 16.95]], [g.box(14, 0.5, 0.3), [-4.5, 33.6, -16.95]]
-        ], chestTaper), lg);
-        add(t, g.box(0.3, 0.6, 20), lg, [-18.75, 35.5, 0]);
+        ], chestTaper), lm);
+        add(t, g.box(0.3, 0.6, 20), lm, [-18.75, 35.5, 0]);
       };
-      DX.head = (h) => add(h, g.torus(11.86, 0.24, 48, 4, PI * 2, 'x'), lg, [-4.2, 0, 0]);
-      DX.ua = (a, sd) => add(a, g.box(0.55, 10, 0.55), lg, [-4.98, 18.4, 2.9 * sd]);
-      DX.fa = (f) => add(f, cc(4.75, 0.6, 0.12, 24), lg, [0, 16.8, 0]);
-      DX.th = (t, sd) => add(t, deform('fxFurTh' + sd, () => [[g.box(0.55, 17, 0.4), [-5.7, 27.5, 8.45 * sd]]], v => { v[2] *= 1 - 0.17 * clamp01((v[1] - 15) / 27); }), lg);
-      DX.sh = (s, sd) => add(s, g.box(0.5, 9, 0.35), lg, [-5.0, 9.8, 6.3 * sd], [0, 0, -0.12]);
+      DX.head = (h) => add(h, g.torus(11.86, 0.24, 48, 4, PI * 2, 'x'), lm, [-4.2, 0, 0]);
+      DX.ua = (a, sd) => add(a, g.box(0.55, 10, 0.55), lm, [-4.98, 18.4, 2.9 * sd]);
+      DX.fa = (f) => add(f, cc(4.75, 0.6, 0.12, 24), lm, [0, 16.8, 0]);
+      DX.th = (t, sd) => add(t, deform('fxFurTh' + sd, () => [[g.box(0.55, 17, 0.4), [-5.7, 27.5, 8.45 * sd]]], v => { v[2] *= 1 - 0.17 * clamp01((v[1] - 15) / 27); }), lm);
+      DX.sh = (s, sd) => add(s, g.box(0.5, 9, 0.35), lm, [-5.0, 9.8, 6.3 * sd], [0, 0, -0.12]);
+    };
+    if (sid === 'furtif') { // filets lumineux rouges
+      const lg = ctx.glow(0xff1830, 2.6);
+      pinstripes(lg);
       skTick = (t) => { lg.emissiveIntensity = lg.userData.baseI * (0.72 + 0.28 * Math.sin(t * 2.6)); };
-    } else if (sid === 'chantier') { // balise orange tournante sur la tête
-      const bg = ctx.glow(0xff5000, 2.4);
+    } else if (sid === 'nacre') { // filets d'or poli (carrosserie de luxe) + médaillon art déco doré sur le plastron laqué noir
+      pinstripes(aluPol);
+      const lines = DX.torso, dm = decalMat('deco', { color: 0xe8c47e, roughness: 0.16, metalness: 1, clearcoat: 0.4, envMapIntensity: 1.5 });
+      DX.torso = (t) => {
+        lines(t);
+        const chestTaper = v => { const u = Math.min(1, Math.max(0, (v[1] - 27) / 25)); v[2] *= 0.86 + 0.14 * u * (2 - u); };
+        add(t, deform('fxDeco', () => [[g.box(16.5, 19, 0.06), [12.94, 42.4, 0], [0, H, 0]]], chestTaper), dm);
+      };
+    } else if (sid === 'chantier') { // balise orange tournante sur la tête + panneaux « danger » sur les flancs
+      const bg = ctx.glow(0xff5000, 2.4), wm = decalMat('warn', { color: 0x111214 });
+      DX.torso = (t) => {
+        const chestTaper = v => { const u = Math.min(1, Math.max(0, (v[1] - 27) / 25)); v[2] *= 0.86 + 0.14 * u * (2 - u); };
+        add(t, deform('fxWarn', () => [[g.box(6.4, 5.8, 0.06), [-9.8, 44.6, 16.85]], [g.box(6.4, 5.8, 0.06), [-9.8, 44.6, -16.85], [0, PI, 0]]], chestTaper), wm);
+      };
       DX.head = (h) => {
         add(h, g.cyl(2.3, 2.5, 1.3, 18), dark, [-6.6, 10.8, 4.1]);
         add(h, g.sphere(1.95, 18, 10, 0, PI * 2, 0, PI / 2), bg, [-6.6, 11.4, 4.1]);
@@ -638,16 +690,16 @@ if (typeof RK !== 'undefined' && RK) RK.models.atlas = function (ctx) {
     } else if (sid === 'magma') {
       skTick = (t) => pulsePat(0.82 + 0.18 * Math.sin(t * 1.6) + 0.06 * Math.sin(t * 5.3));
     } else if (sid === 'hydraulique') { // durites hydrauliques apparentes + raccords anodisés bleus (hommage à l'Atlas hydraulique)
-      const hose = patMat({ color: 0x4a5058, roughness: 0.4, metalness: 0.9, envMapIntensity: 1.1 }, { tex: 'carbon', sc: 1 / 5, c2: 0xc9d0d8, r2: 0.25, m2: 1 });
+      const hose = patMat({ color: 0x1b3c9a, roughness: 0.42, metalness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 1.1 }, { tex: 'carbon', sc: 1 / 3.2, c2: 0x4f86ff, r2: 0.25, m2: 0.4 });
       const hoseRun = (par, key, pts, sd, r = 0.75) => {
-        const q = pts.map(v => [v[0], v[1], v[2] * sd]);
+        const q = pts.map(v => [v[0], v[1], v[2] * sd]); r *= 1.4;
         add(par, g.tube(q, r, 20, 6), hose);
-        for (const e of [q[0], q[q.length - 1]]) add(par, g.cyl(r + 0.45, r + 0.45, 1.8, 10), aluPol, e);
+        for (const e of [q[0], q[q.length - 1]]) add(par, g.cyl(r + 0.4, r + 0.4, 2.2, 10), chrome, e);
       };
       DX.torso = (t) => { for (const sd of [1, -1]) { hoseRun(t, 'w1', [[-3.6, 19.8, 9.6], [-8.6, 23.2, 11.4], [-12.2, 28.8, 12]], sd, 0.95); hoseRun(t, 'w2', [[3.6, 19.8, 9.4], [6.8, 24, 11.2], [8, 29.6, 11.8]], sd, 0.85); } };
       DX.ua = (a, sd) => hoseRun(a, 'ua', [[4.7, 10.5, 4.7], [4.8, 15, 4.8], [4.6, 22, 4.6], [3.7, 28.6, 3.9]], sd, 0.9);
       DX.fa = (f, sd) => hoseRun(f, 'fa', [[-2.6, 4.6, 4.8], [-3.1, 11, 5.3], [-2.6, 18, 4.9], [-2.1, 27, 3.8]], sd, 0.8);
-      DX.th = (t, sd) => hoseRun(t, 'th', [[6.4, 14.2, 8.6], [7.4, 24, 8.8], [6.6, 33.5, 8.1], [4.4, 40.8, 7.2]], sd, 1.05);
+      DX.th = (t, sd) => { hoseRun(t, 'th', [[6.4, 14.2, 8.6], [7.4, 24, 8.8], [6.6, 33.5, 8.1], [4.4, 40.8, 7.2]], sd, 1.05); hoseRun(t, 'th2', [[-7.4, 14.4, 8.9], [-8.3, 24, 9.0], [-7.3, 33, 8.4], [-5.4, 40, 7.7]], sd, 0.95); };
       DX.sh = (s, sd) => hoseRun(s, 'sh', [[5.2, 3.2, 7.2], [6.4, 12, 7.4], [5.2, 23.5, 6.3], [3.0, 34.8, 4.9]], sd, 0.95);
     } else if (sid === 'cuivre') {
       skTick = null;
@@ -694,7 +746,7 @@ if (typeof RK !== 'undefined' && RK && RK.models.atlas) RK.models.atlas.SKINS = 
   furtif: {
     g: { hot: 0xffb3bb, inner: 0xc8001e, led: 0xff1830 },
     m: {
-      alu: { color: 0x474c55, roughness: 0.52, metalness: 0.6, clearcoat: 0.2, clearcoatRoughness: 0.5, envMapIntensity: 1.1 },
+      alu: { color: 0x474c55, roughness: 0.5, metalness: 0.6, clearcoat: 0.2, clearcoatRoughness: 0.5, envMapIntensity: 1.1, roughnessMap: null },
       aluPol: { color: 0x2e3137, roughness: 0.2, metalness: 1, clearcoat: 0.5, clearcoatRoughness: 0.12, envMapIntensity: 1.5 },
       cast: { color: 0x111216, roughness: 0.3, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.0, pat: { tex: 'carbon', sc: 1 / 14, c2: 0x464b55, r2: 0.22, m2: 0.4 } },
       aluDk: { color: 0x202227, roughness: 0.45, metalness: 0.6 },
@@ -705,6 +757,7 @@ if (typeof RK !== 'undefined' && RK && RK.models.atlas) RK.models.atlas.SKINS = 
       plast: { from: 'cast', color: 0x111216, roughness: 0.3, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.0, pat: { tex: 'carbon', sc: 1 / 14, c2: 0x464b55, r2: 0.22, m2: 0.4 } },
       back: { from: 'cast', color: 0x111216, roughness: 0.3, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.0, pat: { tex: 'carbon', sc: 1 / 14, c2: 0x464b55, r2: 0.22, m2: 0.4 } },
       thPlateIn: { from: 'cast', color: 0x111216, roughness: 0.3, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.0, pat: { tex: 'carbon', sc: 1 / 14, c2: 0x464b55, r2: 0.22, m2: 0.4 } },
+      thPlate: { from: 'aluPol', color: 0x2e3137, roughness: 0.4, metalness: 0.9, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 1.1 },
       grille: { color: 0x3c4048 }, grilleDk: { color: 0x26282d }, grilleHd: { color: 0x2c2f35 },
       logo: { glow: [0xff1830, 2.2] },
       ant: { color: 0xff1830, roughness: 0.4 }
@@ -732,7 +785,7 @@ if (typeof RK !== 'undefined' && RK && RK.models.atlas) RK.models.atlas.SKINS = 
   hydraulique: {
     g: { hot: 0xd8f6ff, inner: 0x0088ff, led: 0x36d6ff },
     m: {
-      alu: { color: 0x4b5059, roughness: 0.36, metalness: 0.8, clearcoat: 0.3, clearcoatRoughness: 0.35, envMapIntensity: 1.25 },
+      alu: { color: 0x6c727b, roughness: 0.34, metalness: 0.72, clearcoat: 0.3, clearcoatRoughness: 0.35, envMapIntensity: 1.3 },
       aluPol: { color: 0x2a63dc, roughness: 0.2, metalness: 0.9, clearcoat: 0.7, clearcoatRoughness: 0.08, envMapIntensity: 1.4 },
       cast: { color: 0x1a1b1f, roughness: 0.42, metalness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.3, envMapIntensity: 1.0 },
       aluDk: { color: 0x1e45a0, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.2 },
@@ -774,13 +827,18 @@ if (typeof RK !== 'undefined' && RK && RK.models.atlas) RK.models.atlas.SKINS = 
   emeute: {
     g: { hot: 0xd8e6ff, inner: 0x1a4dff, led: 0x2f7bff },
     m: {
-      alu: { color: 0x15254b, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95, roughnessMap: null },
-      cast: { color: 0x15254b, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95 },
+      alu: { color: 0x1c3166, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95, roughnessMap: null },
+      cast: { color: 0x1c3166, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95 },
+      chest: { from: 'alu', color: 0x1c3166, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95, roughnessMap: null,
+        pat: { tex: 'checker', sc: 1 / 64, off: [0, -12, 0], c2: 0xf3f5f8, r2: 0.22, m2: 0.02, c3: 0xf3f5f8, r3: 0.22, m3: 0.02 } },
+      back: { from: 'alu', color: 0x1c3166, roughness: 0.3, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.95, roughnessMap: null,
+        pat: { tex: 'checker', sc: 1 / 64, off: [0, -12, 0], c2: 0xf3f5f8, r2: 0.22, m2: 0.02, c3: 0xf3f5f8, r3: 0.22, m3: 0.02 } },
+      grille: { pat: { tex: 'checker', sc: 1 / 64, off: [0, -12, 0], c2: 0xf3f5f8, r2: 0.25, m2: 0.05, c3: 0xf3f5f8, r3: 0.25, m3: 0.05 } },
       aluDk: { color: 0x2c3548, roughness: 0.35, metalness: 0.6 },
       panel: { color: 0x1a2236 },
       white: { color: 0xf3f5f8, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 },
       plast: { from: 'white', color: 0xf3f5f8, roughness: 0.22, metalness: 0.02, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6,
-        pat: { tex: 'checker', sc: 1 / 64, off: [0, -7.2, 0], c2: 0x1846c8, r2: 0.25, m2: 0.1, c3: 0x0f1d3d, r3: 0.3, m3: 0.2 } },
+        pat: { tex: 'checker', sc: 1 / 64, off: [0, -12, 0], c2: 0x1846c8, r2: 0.25, m2: 0.1, c3: 0x0f1d3d, r3: 0.3, m3: 0.2 } },
       thPlateIn: { from: 'white', color: 0xf3f5f8, roughness: 0.22, metalness: 0.02, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 },
       shFace: { from: 'white', color: 0xf3f5f8, roughness: 0.22, metalness: 0.02, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.6 },
       logo: { color: 0x1846c8, roughness: 0.3 },
@@ -791,23 +849,46 @@ if (typeof RK !== 'undefined' && RK && RK.models.atlas) RK.models.atlas.SKINS = 
   cuivre: {
     g: { hot: 0xd6fff0, inner: 0x00b884, led: 0x3dffc0 },
     m: {
-      alu: { color: 0xe39a72, roughness: 0.26, metalness: 0.82, clearcoat: 0.6, clearcoatRoughness: 0.15, envMapIntensity: 1.4,
-        pat: { tex: 'patina', sc: 1 / 30, c2: 0x7cc2aa, r2: 0.9, m2: 0, c3: 0x9a4a2a, r3: 0.4, m3: 0.85 } },
+      alu: { color: 0xe8875a, roughness: 0.28, metalness: 0.66, clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 1.5,
+        pat: { tex: 'patina', sc: 1 / 34, c2: 0x3fae8f, r2: 0.85, m2: 0, c3: 0x7a3420, r3: 0.42, m3: 0.7 } },
       aluPol: { color: 0xe2b863, roughness: 0.12, metalness: 1, clearcoat: 0.5, clearcoatRoughness: 0.08, envMapIntensity: 1.6 },
-      cast: { color: 0xc8744a, roughness: 0.26, metalness: 0.85, clearcoat: 0.6, clearcoatRoughness: 0.15, envMapIntensity: 1.3,
-        pat: { tex: 'patina', sc: 1 / 26, off: [5, 11, 3], c2: 0x7cc2aa, r2: 0.9, m2: 0, c3: 0x7a3a22, r3: 0.4, m3: 0.85 } },
+      cast: { color: 0xd97a4c, roughness: 0.26, metalness: 0.7, clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 1.4,
+        pat: { tex: 'patina', sc: 1 / 28, off: [5, 11, 3], c2: 0x3fae8f, r2: 0.85, m2: 0, c3: 0x6a2c1a, r3: 0.42, m3: 0.7 } },
       aluDk: { color: 0x4a3020, roughness: 0.35, metalness: 0.85 },
       panel: { color: 0x1d1511 },
       pad: { color: 0x2b1a12, roughness: 0.62, metalness: 0.02, clearcoat: 0.35, clearcoatRoughness: 0.45, envMapIntensity: 0.6 },
       satin: { color: 0x3a2618, roughness: 0.45, metalness: 0.4 },
       wrap: { color: 0x2e1d14, sheenColor: 0x8a5a3a },
-      white: { color: 0xe8a07a, roughness: 0.16, metalness: 0.95, clearcoat: 0.7, clearcoatRoughness: 0.1, envMapIntensity: 1.5,
-        pat: { tex: 'patina', sc: 1 / 36, off: [9, 2, 7], c2: 0x7cc2aa, r2: 0.9, m2: 0, c3: 0x9a4a2a, r3: 0.4, m3: 0.85 } },
+      white: { color: 0xe8875a, roughness: 0.2, metalness: 0.75, clearcoat: 0.8, clearcoatRoughness: 0.08, envMapIntensity: 1.5,
+        pat: { tex: 'patina', sc: 1 / 36, off: [9, 2, 7], c2: 0x3fae8f, r2: 0.85, m2: 0, c3: 0x7a3420, r3: 0.42, m3: 0.7 } },
       plast: { from: 'aluPol', color: 0xe2b863, roughness: 0.14, metalness: 1, clearcoat: 0.5, clearcoatRoughness: 0.08, envMapIntensity: 1.6 },
       grille: { color: 0xb08040 }, grilleDk: { color: 0x3a2618 }, grilleHd: { color: 0x6a4424 },
       steel: { color: 0xd8b070, roughness: 0.2, metalness: 1 },
       logo: { glow: [0x3dffc0, 2.2] },
       ant: { color: 0xe2b863, roughness: 0.12, metalness: 1, envMapIntensity: 1.6 }
+    }
+  },
+  // NACRE ROYALE : coques blanc nacré irisé, mécanique dorée, laque noire, lueur lilas
+  nacre: {
+    g: { hot: 0xf6eaff, inner: 0x9b4dff, led: 0xc77dff },
+    m: {
+      alu: { color: 0xf2e9ea, roughness: 0.16, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 0.9, roughnessMap: null,
+        iridescence: 1, iridescenceIOR: 1.9, iridescenceThicknessRange: [360, 820], sheen: 1, sheenColor: 0x9fd4ff, sheenRoughness: 0.35 },
+      cast: { color: 0xf2e9ea, roughness: 0.16, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 0.9,
+        iridescence: 1, iridescenceIOR: 1.9, iridescenceThicknessRange: [360, 820], sheen: 1, sheenColor: 0x9fd4ff, sheenRoughness: 0.35 },
+      white: { color: 0xf2e9ea, roughness: 0.14, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 0.9,
+        iridescence: 1, iridescenceIOR: 1.9, iridescenceThicknessRange: [360, 820], sheen: 1, sheenColor: 0x9fd4ff, sheenRoughness: 0.35 },
+      aluPol: { color: 0xe8c47e, roughness: 0.14, metalness: 1, clearcoat: 0.4, clearcoatRoughness: 0.1, envMapIntensity: 1.5 },
+      aluDk: { color: 0xb8925a, roughness: 0.28, metalness: 1, envMapIntensity: 1.3, roughnessMap: null },
+      panel: { color: 0x121015, roughness: 0.2, metalness: 0.2, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.0 },
+      pad: { color: 0x17121c, roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.25 },
+      satin: { color: 0x1a1520 },
+      grille: { color: 0xd8b26a, roughness: 0.3, metalness: 1 }, grilleDk: { color: 0x8a6a3a, metalness: 0.9 }, grilleHd: { color: 0x5a4a32 },
+      steel: { color: 0xe6c27a, roughness: 0.2, metalness: 1, roughnessMap: null },
+      chrome: { color: 0xf2d9a0, roughness: 0.08, metalness: 1 },
+      lens: { color: 0x0b0610 },
+      logo: { color: 0xe8c47e, roughness: 0.15, metalness: 1, envMapIntensity: 1.5 },
+      ant: { glow: [0xc77dff, 2.4] }
     }
   }
 };

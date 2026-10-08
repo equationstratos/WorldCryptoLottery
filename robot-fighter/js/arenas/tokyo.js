@@ -61,7 +61,8 @@
   ARENA3D.tokyo = {
     light: {
       hemi: [0x5a68a8, 0x180c1e, 0.6], key: [0xc4ccff, 1.15], keyPos: [-420, 950, 560],
-      rims: [[0xff3cae, 2.3, [1, 0.35, -0.75]], [0x39d8ff, 2.1, [-1, 0.32, -0.7]], [0xffb060, 0.55, [0.15, 1, -0.45]]],
+      // contre-jours : magenta à gauche (enseigne ロボット), cyan à droite (enseigne ネオ東京), ambre doux en douche
+      rims: [[0xff3cae, 2.3, [-1, 0.35, -0.75]], [0x39d8ff, 2.1, [1, 0.32, -0.7]], [0xffb060, 0.55, [0.15, 1, -0.45]]],
       fog: { color: FOGC, density: FOGD }, bg: 0x0a0914, refl: 0.55, dim: 0.72, env: 'scene'
     },
     // thème : Sol dièse mineur, i–VI–III–VII, basse martelée et mélodie « pluie de néons »
@@ -79,6 +80,7 @@
 
   function build(S) {
     const T = S.T, Q = S.quality, root = S.group(), BGU = T.BufferGeometryUtils;
+    const P0 = performance.now(), prof = n => { if (window.__prof) window.__prof.push([n, Math.round(performance.now() - P0)]); };
     const rnd = S.rng(20251), noise = makeNoise(S.rng(99));
     const tU = { value: 0 }, dimU = { value: 1 };
     const statics = S.group(); root.add(statics);
@@ -151,10 +153,23 @@
     function plain(c, txt, x, y, size, color, weight = 'bold') { c.font = `${weight} ${size}px ${JP}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = color; c.fillText(txt, x, y); }
     function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
     function tube(c, x, y, w, h, r, color, lw) { c.save(); c.shadowColor = color; c.shadowBlur = lw * 3; c.strokeStyle = color; c.lineWidth = lw; rrect(c, x, y, w, h, r); c.stroke(); c.shadowBlur = 0; c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = lw * 0.35; rrect(c, x, y, w, h, r); c.stroke(); c.restore(); }
-    function grain(c, w, h, amt, seed) { const r = S.rng(seed), id = c.getImageData(0, 0, w, h), d = id.data; for (let i = 0; i < d.length; i += 4) { const v = (r() - 0.5) * amt; d[i] += v; d[i + 1] += v; d[i + 2] += v; } c.putImageData(id, 0, 0); }
+    // grain : motif de bruit superposé (mode « overlay ») — pas de getImageData (relecture GPU très lente sur mobile)
+    let grainTile = null;
+    function grain(c, w, h, amt) {
+      if (!grainTile) {
+        grainTile = cv(256, 256); const gc = grainTile.getContext('2d'), id = gc.createImageData(256, 256), r = S.rng(4242);
+        for (let i = 0; i < id.data.length; i += 4) { const v = 128 + (r() - 0.5) * 254; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+        gc.putImageData(id, 0, 0);
+      }
+      c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'overlay'; c.globalAlpha = Math.min(1, amt / 170);
+      c.fillStyle = c.createPattern(grainTile, 'repeat'); c.fillRect(0, 0, w, h); c.restore();
+    }
 
     /* =========================================================
-       SOL : béton / étanchéité mouillés, héliport peint, flaques (rugosité), ondes de pluie (shader)
+       SOL : béton / étanchéité mouillés, héliport peint (usé), flaques (rugosité), ondes de pluie, et
+       REFLETS DES NÉONS : dans le shader du sol, le rayon de vue réfléchi est intersecté avec les plans des
+       enseignes (rectangles lumineux) → traînées colorées nettes dans les flaques, floues sur le béton,
+       qui suivent la caméra et clignotent avec les enseignes.
        ========================================================= */
     const FX0 = -700, FXW = 2700, FZ0 = -1400, FZW = 2300;
     const PW = 256, PH = 128, pudC = cv(PW, PH);
@@ -163,21 +178,17 @@
       for (let j = 0; j < PH; j++) for (let i = 0; i < PW; i++) {
         const x = FX0 + (i + 0.5) / PW * FXW, z = FZ0 + (j + 0.5) / PH * FZW;
         let n = noise(x / 260, z / 150) * 0.6 + noise(x / 105 + 17, z / 62 + 5) * 0.28 + noise(x / 38, z / 24) * 0.12;
-        n += 0.17 * Math.exp(-(((z - 10) / 150) ** 2)); // flaques au premier plan (reflets)
+        n += 0.2 * Math.exp(-(((z + 40) / 190) ** 2)); // flaques autour des combattants (reflets)
         n += 0.12 * Math.exp(-(((z + 1340) / 70) ** 2)); // rigole le long du parapet
-        n -= 0.1 * Math.exp(-(((x - 650) / 330) ** 2 + ((z + 520) / 260) ** 2)); // l'héliport est bombé
-        const a = sstep(0.56, 0.63, n), k = (j * PW + i) * 4;
+        n -= 0.08 * Math.exp(-(((x - 650) / 330) ** 2 + ((z + 520) / 260) ** 2)); // l'héliport est bombé
+        const a = sstep(0.55, 0.62, n), k = (j * PW + i) * 4;
         id.data[k] = id.data[k + 1] = id.data[k + 2] = 255; id.data[k + 3] = a * 255;
       }
       pc.putImageData(id, 0, 0);
     }
     const toWorld = (c, w, h) => c.setTransform(w / FXW, 0, 0, h / FZW, -FX0 * w / FXW, -FZ0 * h / FZW);
     function floorMarks(c, map) {
-      const Y = map ? 'rgba(222,172,38,0.9)' : 'rgb(118,118,118)', Wh = map ? 'rgba(214,216,212,0.88)' : 'rgb(112,112,112)';
-      // joints des dalles
-      c.fillStyle = map ? 'rgba(8,8,10,0.75)' : 'rgb(190,190,190)';
-      for (let x = -700; x <= 2000; x += 300) c.fillRect(x - 2.5, FZ0, 5, FZW);
-      for (let z = -1400; z <= 900; z += 300) c.fillRect(FX0, z - 2.5, FXW, 5);
+      const Y = map ? 'rgba(222,165,30,0.92)' : 'rgb(124,124,124)', Wh = map ? 'rgba(206,208,204,0.86)' : 'rgb(118,118,118)';
       // héliport (緊急離着陸場) : cercle jaune, H blanc
       c.lineWidth = 30; c.strokeStyle = Y; c.beginPath(); c.arc(650, -520, 520, 0, Math.PI * 2); c.stroke();
       c.lineWidth = 7; c.strokeStyle = Wh; c.beginPath(); c.arc(650, -520, 468, 0, Math.PI * 2); c.stroke();
@@ -191,57 +202,96 @@
       // flèches de cheminement
       c.fillStyle = Wh; [[-300, -250], [1600, -250]].forEach(([x, z]) => { c.beginPath(); c.moveTo(x - 60, z + 40); c.lineTo(x + 30, z + 40); c.lineTo(x + 30, z + 70); c.lineTo(x + 90, z); c.lineTo(x + 30, z - 70); c.lineTo(x + 30, z - 40); c.lineTo(x - 60, z - 40); c.fill(); });
     }
+    // calque des marquages, usé par un masque de bruit (écaillures organiques, pas de pixels carrés)
+    const marks = cv(2048, 1024);
+    {
+      const mc = marks.getContext('2d'); toWorld(mc, 2048, 1024); floorMarks(mc, true); mc.setTransform(1, 0, 0, 1, 0, 0);
+      const ww = 512, wh = 256, wr = cv(ww, wh), wc = wr.getContext('2d'), id = wc.createImageData(ww, wh);
+      for (let j = 0; j < wh; j++) for (let i = 0; i < ww; i++) {
+        const x = FX0 + i / ww * FXW, z = FZ0 + j / wh * FZW;
+        const n = noise(x / 46 + 7, z / 30 + 3) * 0.62 + noise(x / 11 + 2, z / 7) * 0.38;
+        const k = (j * ww + i) * 4; id.data[k + 3] = sstep(0.5, 0.72, n) * 235;
+      }
+      wc.putImageData(id, 0, 0);
+      mc.globalCompositeOperation = 'destination-out'; mc.drawImage(wr, 0, 0, 2048, 1024);
+      const r = S.rng(8); mc.fillStyle = 'rgba(0,0,0,0.6)';
+      for (let i = 0; i < 1400; i++) { mc.beginPath(); mc.arc(r() * 2048, r() * 1024, 0.6 + r() * 2.2, 0, 7); mc.fill(); }
+      mc.globalCompositeOperation = 'source-over';
+    }
+    prof('marks');
     const floorTex = S.canvasTex(2048, 1024, (c, w, h) => {
       const lo = cv(512, 256), lc = lo.getContext('2d'), id = lc.createImageData(512, 256);
       for (let j = 0; j < 256; j++) for (let i = 0; i < 512; i++) {
         const x = FX0 + i / 512 * FXW, z = FZ0 + j / 256 * FZW;
         const n = noise(x / 300 + 40, z / 180) * 0.5 + noise(x / 70, z / 45 + 9) * 0.3 + noise(x / 18, z / 12) * 0.2;
-        const v = 30 + n * 34, k = (j * 512 + i) * 4;
-        id.data[k] = v; id.data[k + 1] = v * 1.0; id.data[k + 2] = v * 1.12; id.data[k + 3] = 255;
+        const v = 19 + n * 30, k = (j * 512 + i) * 4;
+        id.data[k] = v; id.data[k + 1] = v * 1.0; id.data[k + 2] = v * 1.14; id.data[k + 3] = 255;
       }
       lc.putImageData(id, 0, 0); c.drawImage(lo, 0, 0, w, h);
       toWorld(c, w, h);
       const r = S.rng(5);
+      // dalles d'étanchéité (léger décalage de teinte d'une dalle à l'autre)
+      for (let x = -700; x < 2000; x += 300) for (let z = -1400; z < 900; z += 300) { c.fillStyle = `rgba(${r() < 0.5 ? 0 : 60},${r() < 0.5 ? 0 : 60},${r() < 0.5 ? 10 : 70},${0.03 + r() * 0.05})`; c.fillRect(x, z, 300, 300); }
       for (let i = 0; i < 90; i++) { // taches d'humidité / rouille
         const x = FX0 + r() * FXW, z = FZ0 + r() * FZW, rad = 30 + r() * 160, g = c.createRadialGradient(x, z, 0, x, z, rad);
         const rust = r() < 0.2; g.addColorStop(0, rust ? 'rgba(70,40,20,0.35)' : 'rgba(6,6,10,0.4)'); g.addColorStop(1, 'rgba(0,0,0,0)');
         c.fillStyle = g; c.fillRect(x - rad, z - rad, rad * 2, rad * 2);
       }
-      floorMarks(c, true);
-      // usure de la peinture
-      for (let i = 0; i < 5000; i++) { const x = 40 + r() * 1220, z = -1100 + r() * 640, s = 2 + r() * 10; c.fillStyle = `rgba(${36 + r() * 16},${36 + r() * 16},${40 + r() * 16},${0.5 + r() * 0.5})`; c.fillRect(x, z, s * 1.6, s); }
-      for (let i = 0; i < 2600; i++) { const x = FX0 + r() * FXW, z = -1400 + r() * 120, s = 2 + r() * 8; c.fillStyle = 'rgba(40,40,44,0.7)'; c.fillRect(x, z, s * 1.6, s); }
+      // joints des dalles (bitume)
+      c.fillStyle = 'rgba(6,6,8,0.8)';
+      for (let x = -700; x <= 2000; x += 300) c.fillRect(x - 2.5, FZ0, 5, FZW);
+      for (let z = -1400; z <= 900; z += 300) c.fillRect(FX0, z - 2.5, FXW, 5);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(marks, 0, 0, w, h); toWorld(c, w, h);
+      // salissures au pied du parapet
+      for (let i = 0; i < 900; i++) { const x = FX0 + r() * FXW, z = -1400 + r() * 110, s = 2 + r() * 8; c.fillStyle = 'rgba(14,14,18,0.5)'; c.beginPath(); c.arc(x, z, s, 0, 7); c.fill(); }
       // fissures
       c.strokeStyle = 'rgba(5,5,8,0.7)'; c.lineWidth = 2.2;
       for (let i = 0; i < 40; i++) { let x = FX0 + r() * FXW, z = FZ0 + r() * FZW; c.beginPath(); c.moveTo(x, z); for (let k = 0; k < 8; k++) { x += (r() - 0.5) * 70; z += (r() - 0.5) * 50; c.lineTo(x, z); } c.stroke(); }
-      // avaloirs (grilles d'évacuation)
+      // avaloirs (grilles d'évacuation) + regards
       [[300, -1350], [1000, -1350], [1700, -1350], [-400, -1350]].forEach(([x, z]) => { c.fillStyle = '#0b0b0d'; c.fillRect(x - 30, z - 22, 60, 44); c.fillStyle = 'rgba(90,90,96,0.8)'; for (let k = -24; k <= 24; k += 8) c.fillRect(x + k - 1.5, z - 20, 3, 40); });
+      [[-260, 120], [1560, 60]].forEach(([x, z]) => { c.fillStyle = 'rgba(40,40,46,0.9)'; c.beginPath(); c.arc(x, z, 34, 0, 7); c.fill(); c.strokeStyle = 'rgba(90,90,100,0.9)'; c.lineWidth = 3; c.stroke(); c.lineWidth = 1.5; for (let k = -24; k <= 24; k += 8) { c.beginPath(); c.moveTo(x - 26, z + k); c.lineTo(x + 26, z + k); c.stroke(); } });
       // assombrissement des flaques (l'eau fonce le sol)
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 0.7; c.globalCompositeOperation = 'source-over';
-      const dk = cv(PW, PH), dc = dk.getContext('2d'); dc.drawImage(pudC, 0, 0); dc.globalCompositeOperation = 'source-in'; dc.fillStyle = '#07070b'; dc.fillRect(0, 0, PW, PH);
+      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 0.75;
+      const dk = cv(PW, PH), dc = dk.getContext('2d'); dc.drawImage(pudC, 0, 0); dc.globalCompositeOperation = 'source-in'; dc.fillStyle = '#05050a'; dc.fillRect(0, 0, PW, PH);
       c.drawImage(dk, 0, 0, w, h); c.globalAlpha = 1;
     }, { aniso: 8 });
+    prof('floorTex');
     const roughTex = S.canvasTex(1024, 512, (c, w, h) => {
       const id = c.createImageData(w, h);
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
         const x = FX0 + i / w * FXW, z = FZ0 + j / h * FZW, n = noise(x / 160 + 3, z / 110 + 50) * 0.7 + noise(x / 30, z / 22) * 0.3;
-        const v = 70 + n * 95, k = (j * w + i) * 4; id.data[k] = id.data[k + 1] = id.data[k + 2] = v; id.data[k + 3] = 255;
+        const v = 62 + n * 100, k = (j * w + i) * 4; id.data[k] = id.data[k + 1] = id.data[k + 2] = v; id.data[k + 3] = 255;
       }
       c.putImageData(id, 0, 0);
-      toWorld(c, w, h); floorMarks(c, false);
-      c.setTransform(1, 0, 0, 1, 0, 0);
-      const dk = cv(PW, PH), dc = dk.getContext('2d'); dc.drawImage(pudC, 0, 0); dc.globalCompositeOperation = 'source-in'; dc.fillStyle = 'rgb(8,8,8)'; dc.fillRect(0, 0, PW, PH);
+      c.globalAlpha = 0.85; c.drawImage(marks, 0, 0, w, h); c.globalAlpha = 1; // la peinture est un peu plus lisse… mais teintée : on la recouvre en gris
+      c.globalCompositeOperation = 'saturation'; c.fillStyle = '#808080'; c.fillRect(0, 0, w, h); c.globalCompositeOperation = 'source-over';
+      const dk = cv(PW, PH), dc = dk.getContext('2d'); dc.drawImage(pudC, 0, 0); dc.globalCompositeOperation = 'source-in'; dc.fillStyle = 'rgb(6,6,6)'; dc.fillRect(0, 0, PW, PH);
       c.drawImage(dk, 0, 0, w, h); c.drawImage(dk, 0, 0, w, h);
     }, { srgb: false, aniso: 8 });
+    prof('roughTex');
     [floorTex, roughTex].forEach(t => { t.wrapS = T.RepeatWrapping; });
-    const floorMat = S.mat({ map: floorTex, roughnessMap: roughTex, roughness: 1, metalness: 0, envMapIntensity: 1.25, color: 0xffffff });
+    const floorMat = S.mat({ map: floorTex, roughnessMap: roughTex, roughness: 1, metalness: 0, envMapIntensity: 1.2, color: 0xffffff });
     const rippleOn = Q < 2;
+    // sources reflétées par le sol : rectangle vertical (centre x, y, z ; demi-largeur, demi-hauteur), couleur, intensité
+    const RA = [], RB = [], RC = [];
+    const rsrc = (x, y, z, hx, hy, color, I) => { RA.push(new T.Vector4(x, y, z, hx)); RB.push(new T.Vector4(hy, I, 0, 0)); const c = new T.Color(color); RC.push(new T.Vector4(c.r, c.g, c.b, 0)); return RA.length - 1; };
+    const RF = {
+      robot: rsrc(-470, 560, -2860, 66, 380, 0xff2fb0, 1.7), neo: rsrc(1870, 600, -3100, 66, 380, 0x2fe0ff, 1.6),
+      ad: rsrc(2520, 780, -3138, 400, 200, 0xff4050, 1.3), kaku: rsrc(-1020, 420, -2893, 64, 160, 0xffe6d8, 1.4),
+      denki: rsrc(2380, 330, -3143, 64, 160, 0xffb21e, 1.6), fight: rsrc(-1500, 700, -2893, 300, 72, 0xffa030, 1.6),
+      hotel: rsrc(3100, 420, -3143, 150, 72, 0xff4a8a, 1.5), roof: rsrc(1530, 445, -1150, 200, 42, 0xa070ff, 2.0),
+      vend: rsrc(1235, 96, -961, 46, 88, 0xe0f0ff, 1.5), lamp: rsrc(1405, 262, -1020, 30, 10, 0xffc080, 3.5),
+      holo: rsrc(-260, 740, -5480, 230, 290, 0x60d8ff, 0.5), exit: rsrc(1405, 236, -1032, 27, 14, 0x20ff80, 1.2),
+      city: rsrc(650, 380, -7000, 9000, 420, 0x6a2a60, 0.35), sky: rsrc(650, 3500, -12000, 14000, 2400, 0xb8c6ff, 0)
+    };
+    const NRS = RA.length, rU = { uRA: { value: RA }, uRB: { value: RB }, uRC: { value: RC } };
     floorMat.onBeforeCompile = (sh) => {
-      sh.uniforms.uT = tU;
+      sh.uniforms.uT = tU; Object.assign(sh.uniforms, rU);
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-        varying vec3 vRW; uniform float uT;
+        #define NR ${NRS}
+        varying vec3 vRW; uniform float uT; uniform vec4 uRA[NR]; uniform vec4 uRB[NR]; uniform vec4 uRC[NR];
         float hr(vec2 p){ p = fract(p * vec2(233.34, 851.73)); p += dot(p, p + 23.45); return fract(p.x * p.y); }
         float gn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
           return mix(mix(hr(i), hr(i + vec2(1.0, 0.0)), f.x), mix(hr(i + vec2(0.0, 1.0)), hr(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -261,6 +311,26 @@
             g.z += smoothstep(0.06, 0.0, r) * smoothstep(0.1, 0.0, ph);
           }
           return g;
+        }
+        float sbox(float d, float h, float w){ float f = clamp((h + w - abs(d)) / (2.0 * w), 0.0, 1.0); return f * f * (3.0 - 2.0 * f); }
+        // reflet des enseignes : rayon de vue réfléchi par le sol → plan vertical z = A.z de chaque source
+        vec3 neonRefl(vec3 P, vec2 dist, float rough){
+          vec3 D = normalize(P - cameraPosition);
+          vec3 R = vec3(D.x, -D.y, D.z);
+          float bw = 0.004 + 0.06 * rough, an = 2.5 + 9.0 * rough;
+          vec3 acc = vec3(0.0);
+          for (int i = 0; i < NR; i++) {
+            vec4 A = uRA[i], B = uRB[i];
+            float t = (A.z - P.z) / min(R.z, -1e-3);
+            if (t < 1.0) continue; // source devant ce point du sol : pas de reflet
+            vec2 H = P.xy + R.xy * t + dist * t;
+            float wx = bw * t + 2.0, wy = wx * an;
+            float k = sbox(H.x - A.x, A.w, wx) * sbox(H.y - A.y, B.x, wy) * (A.w / (A.w + 0.5 * wx)) * (B.x / (B.x + 0.4 * wy));
+            // enseignes verticales : les caractères découpent la traînée (visible dans les flaques nettes)
+            k *= mix(1.0, 0.55 + 0.45 * cos((H.y - A.y) * B.z), clamp(1.0 - wy / (B.x * 0.4), 0.0, 1.0));
+            acc += uRC[i].rgb * (B.y * k);
+          }
+          return acc;
         }`)
         .replace('#include <map_fragment>', `#include <map_fragment>
           float fwz = fwidth(vRW.z);
@@ -271,14 +341,35 @@
           float rf = clamp(1.6 - fwz / 7.0, 0.0, 1.0);
           normal = normalize(normal + (viewMatrix * vec4(rp.x, 0.0, rp.y, 0.0)).xyz * (0.12 + 0.55 * pm) * rf);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-          totalEmissiveRadiance += vec3(0.55, 0.6, 0.75) * rp.z * rf * (0.3 + pm);`);
+          totalEmissiveRadiance += vec3(0.55, 0.6, 0.75) * rp.z * rf * (0.3 + pm);
+          {
+            float cv = clamp(normalize(cameraPosition - vRW).y, 0.0, 1.0);
+            float fr = 0.02 + 0.98 * pow(1.0 - cv, 5.0);
+            float wet = 0.22 + 0.78 * pm;
+            float br = 0.45 + 0.8 * gn(vec2(vRW.x / 9.0, vRW.z / 55.0)) * gn(vec2(vRW.x / 31.0 + 7.0, vRW.z / 140.0));
+            totalEmissiveRadiance += neonRefl(vRW, rp.xy * (0.004 + 0.012 * pm) * rf, roughnessFactor) * fr * wet * mix(br, 1.0, pm);
+            // lumière des sources proches répandue sur le toit (flaques de lumière colorées)
+            vec2 q = vRW.xz;
+            vec3 sp = vec3(0.0);
+            sp += vec3(0.75, 0.85, 1.0) * 1.1 * exp(-dot(q - vec2(1235.0, -930.0), q - vec2(1235.0, -930.0)) / 30000.0);
+            sp += vec3(1.0, 0.7, 0.4) * 1.6 * exp(-dot((q - vec2(1405.0, -930.0)) * vec2(1.0, 0.6), (q - vec2(1405.0, -930.0)) * vec2(1.0, 0.6)) / 26000.0);
+            sp += vec3(0.6, 0.35, 1.0) * 0.9 * exp(-dot(q - vec2(1530.0, -1000.0), q - vec2(1530.0, -1000.0)) / 160000.0);
+            sp += vec3(1.0, 0.2, 0.65) * 0.55 * exp(-dot((q - vec2(-450.0, -1350.0)) * vec2(0.7, 1.0), (q - vec2(-450.0, -1350.0)) * vec2(0.7, 1.0)) / 500000.0);
+            sp += vec3(0.2, 0.8, 1.0) * 0.5 * exp(-dot((q - vec2(1950.0, -1400.0)) * vec2(0.7, 1.0), (q - vec2(1950.0, -1400.0)) * vec2(0.7, 1.0)) / 500000.0);
+            totalEmissiveRadiance += sp * (diffuseColor.rgb * 3.0 + 0.012) * uRB[0].z;
+          }`)
+        .replace('#include <lights_fragment_end>', `radiance *= mix(0.4, 1.0, pm);
+          #include <lights_fragment_end>`);
     };
+    RB[0].z = 1; // (z de la 1re source = facteur global des flaques de lumière)
+    RB[RF.robot].z = RB[RF.neo].z = Math.PI * 2 / 190; // période des caractères (4 kanas sur 760)
     {
-      const geo = new T.PlaneGeometry(7300, 2300); geo.rotateX(-Math.PI / 2); geo.translate(650, 0, -250);
+      const geo = new T.PlaneGeometry(7300, 2300, 8, 1); geo.rotateX(-Math.PI / 2); geo.translate(650, 0, -250);
       const p = geo.attributes.position, uv = geo.attributes.uv;
       for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - FX0) / FXW, 1 - (p.getZ(i) - FZ0) / FZW);
       const fl = new T.Mesh(geo, floorMat); noMerge(fl); root.add(fl);
     }
+    prof('floor');
 
     /* =========================================================
        MATÉRIAUX DU TOIT
@@ -420,6 +511,7 @@
     const vendMat = S.glow(0xffffff, 1.35, { map: vendTex });
     put(new T.PlaneGeometry(92, 176), vendMat, [1235, 96, -960.5]);
 
+    prof('roof');
     /* =========================================================
        ENSEIGNES : atlas 2048×1024 (néons, caissons lumineux)
        ========================================================= */
@@ -475,6 +567,7 @@
     const lampMat = S.glow(0xffd29a, 4);
     put(S.g.box(34, 8, 16), lampMat, [1405, 262, -1022]);
 
+    prof('atlas');
     /* =========================================================
        IMMEUBLES : fenêtres procédurales (shader), 3 couches dans la brume
        ========================================================= */
@@ -485,27 +578,28 @@
     const NR = addB(1950, 4300, -3750, -3150, 3000, { ww: 40, fh: 34, lit: 0.36, style: 1 });
     addB(-560, -150, -3800, -3300, 380, { lit: 0.3 });
     addB(1500, 1950, -4100, -3600, 520, { lit: 0.3 });
-    const HB = addB(120, 520, -5700, -5300, 600, { lit: 0.25 }); // socle de l'hologramme
+    const HB = addB(-470, -50, -5700, -5300, 420, { lit: 0.25 }); // socle de l'hologramme
     // couche moyenne
     const mid = [];
     for (let i = 0; i < (Q > 1 ? 34 : 52); i++) {
       const x = -5200 + rnd() * 11800, z = -4200 - rnd() * 3600, w = 280 + rnd() * 600, d = 260 + rnd() * 520;
-      const center = x > 150 && x < 1150;
-      const h = center ? 150 + rnd() * 450 : 300 + rnd() * rnd() * 2600;
+      // composition : au centre (derrière les combattants) la ville reste basse → une trouée de ciel brumeux
+      const center = x > -700 && x < 2000;
+      const h = center ? 150 + rnd() * rnd() * 700 : 300 + rnd() * rnd() * 2600;
       mid.push(addB(x - w / 2, x + w / 2, z - d, z, h));
     }
     // couche lointaine + mégatours
     const far = [];
     for (let i = 0; i < (Q > 1 ? 80 : 130); i++) {
       const x = -9500 + rnd() * 20500, z = -8000 - rnd() * 6200, w = 380 + rnd() * 900, d = 380 + rnd() * 800;
-      const h = 450 + rnd() * rnd() * 3400;
+      const h = x > -1800 && x < 3100 ? 450 + rnd() * rnd() * 900 : 450 + rnd() * rnd() * 3400;
       far.push(addB(x - w / 2, x + w / 2, z - d, z, h, { lit: 0.18 + rnd() * 0.32 }));
       if (h > 1800 && rnd() < 0.6) far.push(addB(x - w * 0.32, x + w * 0.32, z - d * 0.8, z - d * 0.2, h + 300 + rnd() * 700, { lit: 0.3 })); // retrait
     }
     const megas = [[-2900, -9800, 900, 4600], [3900, -10500, 1100, 5200], [-6200, -12000, 1000, 4200], [7400, -11500, 900, 3900]];
     megas.forEach(([x, z, w, h]) => { far.push(addB(x - w / 2, x + w / 2, z - w, z, h, { lit: 0.4, style: 1 })); far.push(addB(x - w * 0.3, x + w * 0.3, z - w * 0.8, z - w * 0.2, h + 500, { lit: 0.5, style: 1 })); });
     // très loin : silhouettes
-    for (let i = 0; i < (Q > 1 ? 40 : 70); i++) { const x = -10000 + rnd() * 21000, z = -14200 - rnd() * 800, w = 500 + rnd() * 1100; addB(x - w / 2, x + w / 2, z - 500, z, 600 + rnd() * 2600, { lit: 0.12 + rnd() * 0.15, ww: 60, fh: 50 }); }
+    for (let i = 0; i < (Q > 1 ? 40 : 70); i++) { const x = -10000 + rnd() * 21000, z = -14200 - rnd() * 800, w = 500 + rnd() * 1100; addB(x - w / 2, x + w / 2, z - 500, z, x > -3000 && x < 4300 ? 500 + rnd() * 1100 : 600 + rnd() * 2600, { lit: 0.12 + rnd() * 0.15, ww: 60, fh: 50 }); }
 
     function buildingGeo(list) {
       const P = [], Wv = [], Bv = [];
@@ -525,10 +619,10 @@
     const bldMat = S.basic({ color: 0xffffff, fog: true });
     bldMat.onBeforeCompile = (sh) => {
       sh.uniforms.uT = tU;
-      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aW; attribute vec4 aB; varying vec3 vW; varying vec4 vB; varying float vY;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvW = aW; vB = aB; vY = (modelMatrix * vec4(position, 1.0)).y;');
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aW; attribute vec4 aB; varying vec3 vW; varying vec4 vB; varying float vY; varying vec3 vWP;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvW = aW; vB = aB; vWP = (modelMatrix * vec4(position, 1.0)).xyz; vY = vWP.y;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-        uniform float uT; varying vec3 vW; varying vec4 vB; varying float vY;
+        uniform float uT; varying vec3 vW; varying vec4 vB; varying float vY; varying vec3 vWP;
         float hb(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }`)
         .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
           float sd = vB.x;
@@ -555,6 +649,12 @@
             if (vW.z > 1.5) bcol *= 0.62;
           }
           bcol += vec3(0.42, 0.16, 0.3) * smoothstep(250.0, -500.0, vY) * 0.28;
+          // brume de pluie : plus dense au ras des rues (éclairée par les néons d'en bas), s'éclaircit en altitude
+          float dC = length(vWP - cameraPosition);
+          float hl = exp(-max(vY + 300.0, 0.0) / 1300.0);
+          float hz = (1.0 - exp(-dC * 0.000125)) * (0.42 + 0.58 * hl);
+          vec3 hzC = mix(vec3(0.035, 0.03, 0.06), vec3(0.15, 0.055, 0.11), hl);
+          bcol = mix(bcol, hzC, clamp(hz, 0.0, 0.94));
           vec4 diffuseColor = vec4(bcol, opacity);`);
     };
     const bldGeo = buildingGeo(BL);
@@ -572,6 +672,7 @@
     });
     megas.forEach(([x, z, w, h]) => { avi.push({ p: [x, h + 560, z - w / 2], s: 140, c: [1, 0.15, 0.1], i: 3, m: 1, ph: 0.2 }); vcBox(w * 0.6 + 6, 10, w * 0.6 + 6, [x, h + 505, z - w / 2], col(0x2fe0ff), 2.4); });
 
+    prof('buildings');
     /* ----- enseignes des voisins ----- */
     const signs = S.group();
     const sgn = (rect, w, h, p, ry, mat, frame = true) => {
@@ -662,7 +763,7 @@
       transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide
     });
     const holo = new T.Mesh(new T.PlaneGeometry(500, 625), holoMat);
-    holo.position.set(320, 950, -5480); holo.renderOrder = 2; noMerge(holo); root.add(holo);
+    holo.position.set(-260, 740, -5480); holo.renderOrder = 2; noMerge(holo); root.add(holo);
     // faisceau du projecteur
     const coneMat = (color, I, up) => new T.ShaderMaterial({
       uniforms: { uC: { value: new T.Color(color) }, uI: { value: I }, uDim: dimU },
@@ -672,8 +773,8 @@
           gl_FragColor = vec4(uC * uI * uDim * f * f * l, 1.0); }`,
       transparent: true, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide
     });
-    const holoBeam = new T.Mesh(new T.CylinderGeometry(260, 20, 360, 24, 1, true), coneMat(0x6fe8ff, 0.22, true));
-    holoBeam.position.set(320, 600 + 180, -5480); holoBeam.renderOrder = 2; noMerge(holoBeam); root.add(holoBeam);
+    const holoBeam = new T.Mesh(new T.CylinderGeometry(240, 20, 300, 24, 1, true), coneMat(0x6fe8ff, 0.22, true));
+    holoBeam.position.set(-260, 420 + 150, -5480); holoBeam.renderOrder = 2; noMerge(holoBeam); root.add(holoBeam);
 
     /* ----- tour de Tokyo (au loin, dans la brume) ----- */
     {
@@ -697,26 +798,37 @@
       noMerge(nm); root.add(nm);
     }
 
+    prof('signs+ad+holo');
     /* =========================================================
        CIEL : fond peint (nuages bas éclairés par la ville), couche de nuages qui défile, éclairs, projecteurs
        ========================================================= */
     const skyTex = S.canvasTex(2048, 1024, (c, w, h) => {
-      const hz = 0.78 * h; // horizon
+      const hz = 0.78 * h; // horizon (seule la bande 0,42..0,78 est visible depuis la caméra du combat)
       const g = c.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, '#030308'); g.addColorStop(0.35, '#0a0918'); g.addColorStop(0.62, '#1d1430'); g.addColorStop(0.74, '#3a1d40'); g.addColorStop(0.8, '#43233f'); g.addColorStop(1, '#2a2038');
+      g.addColorStop(0, '#020206'); g.addColorStop(0.3, '#06061a'); g.addColorStop(0.48, '#0e0c24'); g.addColorStop(0.62, '#1f1536'); g.addColorStop(0.72, '#3a1c3e'); g.addColorStop(0.78, '#542848'); g.addColorStop(1, '#2a1a30');
       c.fillStyle = g; c.fillRect(0, 0, w, h);
       const r = S.rng(77);
-      for (let i = 0; i < 700; i++) { // masses nuageuses
-        const x = r() * w, y = hz * (0.15 + r() * 0.85), rad = 30 + r() * 140 * (y / hz), k = y / hz;
-        const gg = c.createRadialGradient(x, y + rad * 0.3, 0, x, y, rad);
-        const lr = 60 + 120 * k * k, lg = 25 + 50 * k * k, lb = 70 + 70 * k;
-        gg.addColorStop(0, `rgba(${lr | 0},${lg | 0},${lb | 0},${0.1 + 0.12 * k})`); gg.addColorStop(1, 'rgba(0,0,0,0)');
+      // teinte de la lumière de la ville selon x (quartiers : magenta, ambre, violet, cyan)
+      const HUE = [[255, 70, 170], [255, 150, 70], [170, 90, 255], [90, 200, 255], [255, 70, 170]];
+      const hue = x => { const u = (x / w) * 4, i = Math.floor(u) % 4, f = u - Math.floor(u), a = HUE[i], b = HUE[i + 1]; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; };
+      // plafond nuageux bas : ellipses étirées, dessous éclairé par la ville (plus clair vers l'horizon)
+      c.save(); c.setTransform(1, 0, 0, 0.36, 0, 0);
+      for (let i = 0; i < 620; i++) {
+        const x = r() * w, yN = 0.4 + Math.pow(r(), 0.7) * 0.4, y = yN * h / 0.36, k = Math.min(1, Math.max(0, (yN - 0.4) / 0.38));
+        const rad = (40 + r() * 150) * (0.6 + k), hc = hue(x), lit = 0.25 + 0.75 * k * k;
+        const gg = c.createRadialGradient(x, y + rad * 0.35, 0, x, y, rad);
+        const cr = 30 + (hc[0] * 0.55 - 30) * lit, cg = 18 + (hc[1] * 0.4 - 18) * lit, cb = 46 + (hc[2] * 0.5 - 46) * lit;
+        gg.addColorStop(0, `rgba(${cr | 0},${cg | 0},${cb | 0},${0.12 + 0.16 * k})`); gg.addColorStop(1, 'rgba(0,0,0,0)');
         c.fillStyle = gg; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
       }
-      for (let i = 0; i < 260; i++) { const x = r() * w, y = hz * (0.1 + r() * 0.7), rad = 40 + r() * 120, gg = c.createRadialGradient(x, y, 0, x, y, rad); gg.addColorStop(0, 'rgba(4,3,10,0.35)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
-      // halo de la ville sur l'horizon (magenta / ambre)
-      [[0.18, '255,60,170'], [0.42, '255,150,60'], [0.6, '80,200,255'], [0.82, '255,60,170']].forEach(([fx, cc]) => { const gg = c.createRadialGradient(fx * w, hz, 0, fx * w, hz, 420); gg.addColorStop(0, `rgba(${cc},0.22)`); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.fillRect(fx * w - 420, hz - 420, 840, 840); });
-      grain(c, w, h, 6, 21);
+      for (let i = 0; i < 300; i++) { // trouées sombres entre les masses
+        const x = r() * w, y = (0.36 + r() * 0.36) * h / 0.36, rad = 50 + r() * 150, gg = c.createRadialGradient(x, y, 0, x, y, rad);
+        gg.addColorStop(0, 'rgba(4,3,12,0.4)'); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+      }
+      c.restore();
+      // halo de la ville sur l'horizon
+      for (let i = 0; i < 9; i++) { const fx = (i + 0.5) / 9 + (r() - 0.5) * 0.06, hc = hue(fx * w), R = 260 + r() * 260, gg = c.createRadialGradient(fx * w, hz, 0, fx * w, hz, R); gg.addColorStop(0, `rgba(${hc[0] | 0},${hc[1] | 0},${hc[2] | 0},0.2)`); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.fillRect(fx * w - R, hz - R, R * 2, R * 2); }
+      grain(c, w, h, 6);
     }, { mip: true });
     const skyMat = S.basic({ map: skyTex, fog: false, toneMapped: false });
     const sky = new T.Mesh(new T.PlaneGeometry(46000, 9000), skyMat);
@@ -747,13 +859,14 @@
     const flashLight = new T.PointLight(0xb8c6ff, 0, 0, 0); flashLight.position.set(900, 5000, -6000); root.add(flashLight);
     // projecteurs qui balaient les nuages
     const searchL = [];
-    [[-2900, 5100, -9800, 0.35, 0], [3900, 5700, -10500, -0.3, 2.1], [-6200, 4700, -12000, 0.15, 4.2]].forEach(([x, y, z, base, ph], k) => {
+    [[-2300, 1100, -9000, -0.42, 0], [3500, 1300, -9800, 0.4, 2.1], [-4800, 900, -12000, -0.2, 4.2]].forEach(([x, y, z, base, ph], k) => {
       if (Q > 1 && k > 1) return;
-      const geo = new T.CylinderGeometry(340, 18, 9000, 20, 1, true); geo.translate(0, 4500, 0);
-      const m = new T.Mesh(geo, coneMat(0xbfd6ff, 0.075, true)); m.position.set(x, y, z); m.renderOrder = 1; noMerge(m); root.add(m);
+      const geo = new T.CylinderGeometry(300, 16, 7000, 20, 1, true); geo.translate(0, 3500, 0);
+      const m = new T.Mesh(geo, coneMat(0xc8dcff, 0.11, true)); m.position.set(x, y, z); m.renderOrder = 1; noMerge(m); root.add(m);
       searchL.push({ m, base, ph });
     });
 
+    prof('sky');
     /* =========================================================
        LUMIÈRES PONCTUELLES : balises rouges, héliport, parapet, lampe, halos des enseignes
        ========================================================= */
@@ -773,7 +886,7 @@
       { p: [-470, 560, -2840], s: 900, c: col(0xff2fb0), i: 0.32, m: 0 }, { p: [1870, 600, -3080], s: 900, c: col(0x2fe0ff), i: 0.3, m: 0 },
       { p: [-1020, 420, -2880], s: 520, c: col(0xffe0d0), i: 0.18, m: 0 }, { p: [2380, 330, -3130], s: 500, c: col(0xffb21e), i: 0.22, m: 0 },
       { p: [2520, 780, -3120], s: 1300, c: col(0x80a0ff), i: 0.2, m: 0 }, { p: [-1500, 700, -2880], s: 800, c: col(0xff8a20), i: 0.2, m: 0 },
-      { p: [320, 900, -5470], s: 1100, c: col(0x50d0ff), i: 0.18, m: 2 }, { p: [1530, 445, -1135], s: 650, c: col(0x9060ff), i: 0.22, m: 0 },
+      { p: [-260, 700, -5470], s: 1100, c: col(0x50d0ff), i: 0.18, m: 2 }, { p: [1530, 445, -1135], s: 650, c: col(0x9060ff), i: 0.22, m: 0 },
       { p: [1235, 100, -955], s: 300, c: col(0xd8ecff), i: 0.3, m: 0 }, { p: [1405, 20, -980], s: 260, c: col(0xffc080), i: 0.25, m: 5, ph: 0.3 }
     ];
     sprites(halos, 0);
@@ -811,19 +924,39 @@
           float y = fract(p.y + uT * (2.2 + h * 1.2) + h * 7.0);
           float s = smoothstep(0.0, 0.04, y) * smoothstep(0.5, 0.05, y) * smoothstep(0.5, 0.1, abs(fract(p.x) - 0.5)) * step(0.35, h1(cl * 1.7 + 3.0));
           float fade = smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.75, vUv.y);
-          gl_FragColor = vec4(uC * s * uA * fade * uDim, 1.0);
+          // rafales : des rideaux de pluie plus denses balayent la ville
+          float gust = 0.25 + 1.5 * pow(0.5 + 0.5 * sin(vUv.x * 9.0 + uT * 0.9 + 1.7 * sin(vUv.x * 3.1 - uT * 0.4)), 3.0);
+          gl_FragColor = vec4(uC * s * uA * fade * gust * uDim, 1.0);
         }`,
       transparent: true, depthWrite: false, blending: T.AdditiveBlending
     });
-    [[-2200, 7000, 2600, 0.16, [900, 9]], [-4200, 11000, 4200, 0.12, [1100, 10]]].forEach(([z, w, h, a, rep], k) => {
+    [[-2200, 7000, 2600, 0.075, [900, 9]], [-4200, 11000, 4200, 0.06, [1100, 10]]].forEach(([z, w, h, a, rep], k) => {
       if (Q > 1 && k) return;
       const m = new T.Mesh(new T.PlaneGeometry(w, h), sheetMat(a, rep)); m.position.set(650, h / 2 - 300, z); m.renderOrder = 1; noMerge(m); root.add(m);
     });
     // pluie (3 couches)
     const rq = Q > 1 ? 0.5 : Q > 0 ? 0.75 : 1;
-    root.add(S.particles({ kind: 'rain', count: Math.round(1600 * rq), box: [-520, 520, 0, 650, -260, 420], size: 1.5, speed: 1500, opacity: 0.32, wind: [-110, 0], color: 0xb0c4ee, seed: 3 }));
-    root.add(S.particles({ kind: 'rain', count: Math.round(2600 * rq), box: [-950, 950, 0, 1000, -1400, -260], size: 2.4, speed: 1450, opacity: 0.42, wind: [-110, 0], color: 0xa8bce8, seed: 5 }));
-    root.add(S.particles({ kind: 'rain', count: Math.round(3200 * rq), box: [-2600, 2600, -100, 2400, -4800, -1450], size: 5.5, speed: 1400, opacity: 0.32, wind: [-120, 0], color: 0x98a8d8, seed: 9 }));
+    // gouttes éclairées par les sources voisines (enseignes, lampe, distributeur, projecteur du drone, éclairs) :
+    // on complète le shader des particules du kit (couleur additionnelle calculée par goutte, sur GPU)
+    const RLP = [], RLC = [], RL0 = [];
+    const rlight = (x, y, z, rad, color, I) => { RLP.push(new T.Vector4(x, y, z, rad)); const c = new T.Color(color).multiplyScalar(I); RL0.push(c); RLC.push(new T.Vector4(c.r, c.g, c.b, 0)); return RLP.length - 1; };
+    const RLI = {
+      robot: rlight(-470, 560, -2800, 620, 0xff2fb0, 1.5), neo: rlight(1870, 600, -3040, 620, 0x2fe0ff, 1.4),
+      lamp: rlight(1405, 170, -990, 210, 0xffb070, 2.2), vend: rlight(1235, 110, -890, 170, 0xd8e8ff, 1.3),
+      roof: rlight(1530, 440, -1090, 330, 0x9a6aff, 1.3), ad: rlight(2520, 780, -2950, 760, 0xff4050, 1.0),
+      drone: rlight(0, -9999, 0, 330, 0xf0f4ff, 2.2), flash: rlight(650, 1500, -1500, 4200, 0xb8c6ff, 0)
+    };
+    const litRain = (pts) => {
+      const m = pts.material;
+      m.uniforms.uLP = { value: RLP }; m.uniforms.uLC = { value: RLC };
+      m.vertexShader = `#define NL ${RLP.length}\n` + m.vertexShader.replace('varying float vA;', 'varying float vA; varying vec3 vL; uniform vec4 uLP[NL]; uniform vec4 uLC[NL];')
+        .replace('vS = gl_PointSize;', 'vS = gl_PointSize; vL = vec3(0.0); for (int i = 0; i < NL; i++) { vec3 dd = (w - uLP[i].xyz) / uLP[i].w; vL += uLC[i].rgb * exp(-dot(dd, dd)); }');
+      m.fragmentShader = m.fragmentShader.replace('varying float vA;', 'varying float vA; varying vec3 vL;').replace('gl_FragColor = vec4(col,', 'gl_FragColor = vec4(col + vL,');
+      return pts;
+    };
+    root.add(litRain(S.particles({ kind: 'rain', count: Math.round(1600 * rq), box: [-520, 520, 0, 650, -260, 420], size: 1.5, speed: 1500, opacity: 0.3, wind: [-110, 0], color: 0xa8bce8, seed: 3 })));
+    root.add(litRain(S.particles({ kind: 'rain', count: Math.round(2800 * rq), box: [-950, 950, 0, 1000, -1400, -260], size: 2.4, speed: 1450, opacity: 0.36, wind: [-110, 0], color: 0x8a9cc8, seed: 5 })));
+    root.add(litRain(S.particles({ kind: 'rain', count: Math.round(3600 * rq), box: [-2600, 2600, -100, 2400, -4800, -1450], size: 5.5, speed: 1400, opacity: 0.3, wind: [-120, 0], color: 0x7a88b8, seed: 9 })));
 
     // drone de police (passe régulièrement, gyrophares, projecteur)
     const drone = S.group(); drone.userData.noMerge = true;
@@ -854,7 +987,7 @@
       const scr = new T.Mesh(new T.PlaneGeometry(760, 110), S.glow(0xffffff, 1.6, { map: marqTex, fog: true }));
       scr.position.set(0, 10, 166); blimp.add(scr);
       sprites([{ p: [700, 0, 0], s: 90, c: [1, 1, 1], i: 2, m: 1, ph: 0 }, { p: [-640, 120, 0], s: 80, c: [1, 0.1, 0.1], i: 2, m: 1, ph: 0.5 }, { p: [60, -200, 0], s: 70, c: [0.2, 1, 0.4], i: 1.6, m: 2 }], 1, blimp);
-      blimp.position.set(0, 1650, -8600); root.add(blimp);
+      blimp.position.set(0, 1150, -8600); root.add(blimp);
     }
 
     /* ----- décor réservé aux reflets (cubemap) : enseignes derrière la caméra ----- */
@@ -862,25 +995,34 @@
     S.add(envOnly, new T.PlaneGeometry(900, 1600), S.glow(0x2fe0ff, 1.6), { p: [2200, 700, 2600], r: [0, -Math.PI * 0.85, 0] });
     S.add(envOnly, new T.PlaneGeometry(1400, 500), S.glow(0xffa040, 1.2), { p: [650, 900, 3400], r: [0, Math.PI, 0] });
 
+    prof('life');
     S.merge(statics);
 
     /* =========================================================
        ANIMATION (aucune allocation)
        ========================================================= */
     const sky0 = skyMat.color.clone(), cloud0 = cloudMat.color.clone(), adOff = [[0, 0.5], [0.5, 0.5], [0, 0], [0.5, 0]];
+    const adCol = [[1, 0.16, 0.2], [0.1, 0.55, 1], [1, 0.3, 0.75], [0.15, 0.45, 0.85]];
+    function rl(i, k) { const c = RL0[i]; RLC[i].set(c.r * k, c.g * k, c.b * k, 0); }
     function update(t, info) {
       if (envOnly.visible) envOnly.visible = false;
       const dk = 1 - (1 - (info.dim == null ? 1 : info.dim)) * (0.72 / 0.7);
       tU.value = t; dimU.value = dk;
       // néons qui grésillent
-      signFlick.color.setScalar(SIGN_I * flick(t, 1.7, 0.4));
+      const fk = flick(t, 1.7, 0.4), fl3 = flick(t, 3.3, 0.5);
+      signFlick.color.setScalar(SIGN_I * fk);
+      RB[RF.robot].y = 1.7 * fk; RB[RF.roof].y = 2.0 * fk; RB[RF.lamp].y = 3.5 * fl3;
+      rl(RLI.robot, fk * dk); rl(RLI.roof, fk * dk); rl(RLI.lamp, fl3 * dk); rl(RLI.vend, dk); rl(RLI.neo, dk);
       signFar.color.setScalar(1.7 * flick(t, 5.3, 0.15));
       vendMat.color.setScalar(1.35 * (0.9 + 0.1 * flick(t, 9.1, 0.3)));
-      lampMat.color.setRGB(1, 0.82, 0.6).multiplyScalar(4 * flick(t, 3.3, 0.5));
+      lampMat.color.setRGB(1, 0.82, 0.6).multiplyScalar(4 * fl3);
       // écran géant : 4 pubs, transition « glitch »
       const fi = Math.floor(t / 5.5) % 4, ft = t % 5.5, gl = ft < 0.35;
       adTex.offset.set(adOff[fi][0] + (gl ? (hsh(Math.floor(t * 30)) - 0.5) * 0.03 : 0), adOff[fi][1]);
-      adMat.color.setScalar(1.5 * (gl ? 0.5 + hsh(Math.floor(t * 40) + 3) : 1));
+      const adk = gl ? 0.5 + hsh(Math.floor(t * 40) + 3) : 1;
+      adMat.color.setScalar(1.5 * adk);
+      RC[RF.ad].set(adCol[fi][0], adCol[fi][1], adCol[fi][2], 0); RB[RF.ad].y = 1.3 * adk;
+      RLC[RLI.ad].set(adCol[fi][0] * adk * dk, adCol[fi][1] * adk * dk, adCol[fi][2] * adk * dk, 0);
       marqTex.offset.x = (t * 0.045) % 1;
       cloudTex.offset.x = (t * 0.0012) % 1;
       // éclairs
@@ -892,18 +1034,23 @@
       boltMat.color.setRGB(0.78, 0.83, 1).multiplyScalar(dk);
       bolt.visible = fl > 0.5; if (bolt.visible) { bolt.position.x = -5000 + hsh(kk * 5.1) * 11000; bolt.scale.x = hsh(kk * 2.3) < 0.5 ? 1 : -1; }
       flashLight.intensity = fl * 2.6 * dk;
+      RB[RF.sky].y = fl * 0.9;
+      RLC[RLI.flash].set(0.72 * fl, 0.78 * fl, fl, 0);
       // projecteurs
-      for (let i = 0; i < searchL.length; i++) { const s = searchL[i]; s.m.rotation.z = s.base + Math.sin(t * 0.23 + s.ph) * 0.42; s.m.rotation.x = -0.25 + Math.sin(t * 0.17 + s.ph * 1.3) * 0.18; }
+      for (let i = 0; i < searchL.length; i++) { const s = searchL[i]; s.m.rotation.z = s.base + Math.sin(t * 0.23 + s.ph) * 0.3; s.m.rotation.x = -0.25 + Math.sin(t * 0.17 + s.ph * 1.3) * 0.18; }
       // hologramme : respiration
-      holo.position.y = 950 + Math.sin(t * 0.8) * 12;
+      holo.position.y = 740 + Math.sin(t * 0.8) * 12;
       // drone : passage toutes les 26 s, à des profondeurs alternées
       const dp = t % 26, dir = Math.floor(t / 26) % 2 ? -1 : 1;
       drone.visible = dp < 11;
       if (drone.visible) { const u = dp / 11; drone.position.set(dir > 0 ? -2600 + u * 6200 : 3600 - u * 6200, 470 + Math.sin(t * 1.3) * 18 + (dir > 0 ? 0 : 60), dir > 0 ? -2050 : -2500); drone.rotation.set(Math.sin(t * 1.1) * 0.05, dir > 0 ? 0 : Math.PI, -0.08); }
+      // le faisceau du drone éclaire la pluie sous lui
+      RLP[RLI.drone].set(drone.position.x + (dir > 0 ? 260 : -260), drone.visible ? drone.position.y - 330 : -9999, drone.position.z, 330);
       // dirigeable
-      blimp.position.x = -5200 + (t * 32) % 11000; blimp.position.y = 1650 + Math.sin(t * 0.2) * 30;
+      blimp.position.x = -5200 + (t * 32 + 3500) % 11000; blimp.position.y = 1150 + Math.sin(t * 0.2) * 30;
     }
 
+    prof('merge');
     return { root, update };
   }
 })();
