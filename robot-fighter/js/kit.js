@@ -411,6 +411,7 @@ const RK = (function () {
   const qTw = new T.Quaternion(), vTw = new T.Vector3(), yAx = new T.Vector3(0, 1, 0);
   // p.twist : rotation du haut du corps autour de l'axe vertical passant par la hanche (moteurs 360°)
   // p.headSpin : rotation de la tête sur elle-même ; z : décalage en profondeur (prises, projections)
+  // p.kyf / p.kyb : rotation de la jambe avant / arrière autour de l'axe vertical de sa hanche
   function pose(rb, p, x, hipY, face, yaw = -0.42, t = 0, st = '', z = 0) {
     const ch = rb.ch, P = rb.P;
     const pz = p.sx !== 1 ? Object.assign({}, p, { sx: 1 }) : p;
@@ -451,6 +452,16 @@ const RK = (function () {
       for (const k of UPPER) {
         const o = P[k]; vTw.set(o.position.x - hx, o.position.y - hy, o.position.z).applyQuaternion(qTw);
         o.position.set(hx + vTw.x, hy + vTw.y, vTw.z); o.quaternion.premultiply(qTw);
+      }
+    }
+    // rotation d'une jambe autour de l'axe vertical de sa hanche (coups de pied circulaires « sur le côté »)
+    for (const [sd, ky, zz] of [['f', p.kyf, 1], ['b', p.kyb, -1]]) {
+      if (!ky) continue;
+      qTw.setFromAxisAngle(yAx, ky);
+      const hp = S[sd + 'hi'], hx = hp.x, hy = -hp.y, hz = zz * rb.hpZ;
+      for (const k of ['th', 'sh', 'hi', 'kn', 'fo']) {
+        const o = P[sd + k]; vTw.set(o.position.x - hx, o.position.y - hy, o.position.z - hz).applyQuaternion(qTw);
+        o.position.set(hx + vTw.x, hy + vTw.y, hz + vTw.z); o.quaternion.premultiply(qTw);
       }
     }
     if (z) rb.root.position.z = z;

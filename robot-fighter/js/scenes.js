@@ -763,36 +763,36 @@ const PUPPET_SEQ = {
   confirm: [['crouch', 7, { fx: 'charge' }], ['upper', 9, { dy: 55, fx: 'burst' }], ['win', 14], ['win', 30]]
 };
 class Puppet {
-  constructor() { this.seq = null; this.t = 0; this.idleT = 0; this.hold = null; this.onFx = null; }
-  play(name, hold) {
-    const seq = PUPPET_SEQ[name]; if (!seq) return;
-    this.seq = seq; this.name = name; this.t = 0; this.hold = hold || null; this.fired = new Set(); this.idleT = 0;
-    let acc = 0; this.times = seq.map(k => (acc += k[1]));
+  constructor() { this.seq = null; this.t = 0; this.idleT = 0; this.hold = null; this.onFx = null; this.loopFrom = null; }
+  // name : clé de PUPPET_SEQ ou séquence ; hold : enchaînement suivant ; loopFrom : index d'où reboucler à la fin
+  play(name, hold, loopFrom) {
+    const seq = Array.isArray(name) ? name : PUPPET_SEQ[name]; if (!seq) return;
+    this.seq = seq; this.name = name; this.t = 0; this.hold = hold || null; this.loopFrom = loopFrom == null ? null : loopFrom; this.fired = new Set(); this.idleT = 0;
+    this.times = motionTimes(seq);
+  }
+  // animation personnelle du robot (js/motions) : 'intro' (repli : enter) ou 'victory' (repli : confirm), la victoire reboucle
+  playMotion(ch, kind) {
+    const seq = motionOf(ch, kind), m = MOTIONS[(ch.base || ch).id];
+    if (kind === 'intro') return this.play(seq || 'enter');
+    if (seq) this.play(seq, null, m.victoryLoop != null ? m.victoryLoop : Math.max(0, seq.length - 2));
+    else this.play('confirm', 'taunt');
   }
   get busy() { return !!this.seq; }
   update() {
     this.idleT++;
     if (!this.seq) return;
     this.t++;
-    this.times.forEach((tt, i) => { const fx = this.seq[i][2] && this.seq[i][2].fx; if (fx && !this.fired.has(i) && this.t >= tt - this.seq[i][1]) { this.fired.add(i); this.onFx && this.onFx(fx, this.state()); } });
-    if (this.t > this.times[this.times.length - 1]) { const h = this.hold; this.seq = null; this.idleT = 0; if (h) this.play(h, h); }
+    this.times.forEach((tt, i) => { const o = this.seq[i][2]; if (o && (o.fx || o.say || o.sfx) && !this.fired.has(i) && this.t >= tt - this.seq[i][1]) { this.fired.add(i); this.onFx && this.onFx(o, this.state()); } });
+    if (this.t > this.times[this.times.length - 1]) {
+      if (this.loopFrom != null) { this.t = this.loopFrom ? this.times[this.loopFrom - 1] : 0; for (let i = this.loopFrom; i < this.seq.length; i++) this.fired.delete(i); return; }
+      const h = this.hold; this.seq = null; this.idleT = 0; if (h) this.play(h, h);
+    }
   }
   state() {
     const breathe = Math.sin(performance.now() / 1000 * 4.2) * 2.5;
     const idle = { ...POSES.idle, fe: POSES.idle.fe + breathe, be: POSES.idle.be - breathe, fk: POSES.idle.fk + breathe, lean: POSES.idle.lean + breathe * 0.3 };
-    const P = n => typeof n === 'string' ? (n === 'idle' ? idle : POSES[n]) : n;
-    const opt = (k, key, def) => (k && k[2] && k[2][key] != null) ? k[2][key] : def;
     if (!this.seq) return { pose: idle, yaw: -0.42, dx: 0, dy: 0 };
-    const t = this.t, sq = this.seq;
-    let i = this.times.findIndex(tt => tt >= t); if (i < 0) i = sq.length - 1;
-    const prev = sq[Math.max(0, i - 1)], cur = sq[i];
-    const t0 = i ? this.times[i - 1] : 0, d = Math.max(1, cur[1]);
-    const k = i === 0 ? 1 : easeOut(clamp((t - t0) / d, 0, 1));
-    const pa = P(prev[0]), pb = P(cur[0]);
-    const pose = lerpPose(pa, pb, k);
-    const L = key => lerp(opt(prev, key, key === 'yaw' ? -0.42 : 0), opt(cur, key, key === 'yaw' ? -0.42 : 0), k);
-    pose.spin = (pose.spin || 0) + L('spin');
-    return { pose, yaw: L('yaw'), dx: L('dx'), dy: L('dy') };
+    return motionSample(this.seq, this.t, idle, this.times);
   }
 }
 // effets visuels des marionnettes (coordonnées écran) : ch, x/pied, échelle, sens
@@ -823,17 +823,21 @@ class SelectScene {
     this.anim = 0; this.shake = 0; this.flash = 0; this.demoI = [0, 0];
     FX.clear();
     this.pup = [new Puppet(), new Puppet()];
-    this.pup.forEach((pp, p) => { pp.onFx = kind => this.fx(p, kind); pp.play('enter'); });
+    this.pup.forEach((pp, p) => { pp.onFx = o => this.fx(p, o); pp.playMotion(this.chOf(p), 'intro'); });
   }
   get two() { return this.mode === 'versus' || this.mode === 'training'; } // deux robots à choisir
   previewX(p) { return p === 0 ? 150 : W - 150; }
   chOf(p) { return withSkin(ROSTER[this.cur[p]], this.skin[p]); }
-  fx(p, kind) {
+  fx(p, o) {
     const ch = this.chOf(p), face = p === 0 ? 1 : -1;
-    puppetFx(kind, ch, this.previewX(p), 455, 1.55, face);
-    if (kind === 'burst') { this.shake = 12; this.flash = 8; }
+    motionFire(o, ch, this.previewX(p), 455, 1.55, face);
+    if (o.fx === 'burst' || o.shake) { this.shake = o.shake || 12; this.flash = 8; }
   }
-  demo(p) { const ch = this.chOf(p), list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length], this.done[p] ? 'taunt' : null); }
+  demo(p) {
+    const ch = this.chOf(p);
+    if (this.done[p]) return this.pup[p].playMotion(ch, 'victory');
+    const list = DEMOS(ch); this.pup[p].play(list[this.demoI[p]++ % list.length]);
+  }
   tile(i) { const C = SEL_COLS, n = ROSTER.length, row = (i / C) | 0, inRow = Math.min(C, n - row * C), col = i % C; return { x: W / 2 + (col - (inRow - 1) / 2) * 82, y: 322 + row * 84, s: 76 }; }
   update() {
     this.t++; this.anim++;
@@ -868,14 +872,14 @@ class SelectScene {
       if (pd.pressed.l) c = rowStart + ((c - rowStart - 1 + rowLen) % rowLen);
       if (pd.pressed.r) c = rowStart + ((c - rowStart + 1) % rowLen);
       if (pd.pressed.u || pd.pressed.d) { const col = c - rowStart, nr = (row + 1) % Math.ceil(N / C), nrLen = Math.min(C, N - nr * C); c = nr * C + Math.min(col, nrLen - 1); }
-      if (c !== this.cur[p]) { this.cur[p] = c; this.skin[p] = 0; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; }
+      if (c !== this.cur[p]) { this.cur[p] = c; this.skin[p] = 0; AU.sfx('move'); this.pup[p].playMotion(this.chOf(p), 'intro'); this.demoI[p] = 0; }
       if (confirmPressed(pd)) this.pickChar(p);
     }
     for (const t of taps) for (let i = 0; i < ROSTER.length; i++) {
       const r = this.tile(i);
       if (inRect(t, r.x - r.s / 2, r.y - r.s / 2, r.s, r.s)) {
         const p = this.done[0] ? 1 : 0; if (this.done[p]) break;
-        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; this.skin[p] = 0; this.skinSel[p] = false; AU.sfx('move'); this.pup[p].play('enter'); this.demoI[p] = 0; sayName(ROSTER[i]); }
+        if (this.cur[p] === i) this.pickChar(p); else { this.cur[p] = i; this.skin[p] = 0; this.skinSel[p] = false; AU.sfx('move'); this.pup[p].playMotion(this.chOf(p), 'intro'); this.demoI[p] = 0; sayName(ROSTER[i]); }
       }
     }
     if (taps.some(t => inRect(t, W / 2 - 90, 500, 180, 34))) { const p = this.done[0] ? 1 : 0; if (!this.done[p]) this.pickChar(p); }
@@ -883,14 +887,14 @@ class SelectScene {
   cycleSkin(p, d) {
     const n = skinList(ROSTER[this.cur[p]]).length; if (n < 2) return;
     this.skin[p] = (this.skin[p] + d + n) % n; AU.sfx('move');
-    this.pup[p].play('taunt');
+    if (!this.pup[p].busy) this.pup[p].play('taunt');
   }
   pickChar(p) {
     // robots avec plusieurs skins : 1re validation = choix du skin, 2e = prêt
     if (skinList(ROSTER[this.cur[p]]).length > 1 && !this.skinSel[p]) { this.skinSel[p] = true; this.plock[p] = 6; AU.sfx('select'); AU.say('Choose your skin', 0.5, 1.05); return; }
     this.skinSel[p] = false;
     this.done[p] = true; AU.sfx('confirm'); sayName(ROSTER[this.cur[p]]); this.lock = 10;
-    this.pup[p].play('confirm', 'taunt');
+    this.pup[p].playMotion(this.chOf(p), 'victory');
     if (this.done[0] && this.done[1]) this.out = 1;
   }
   go() {
@@ -1088,14 +1092,13 @@ class ArenaSelectScene {
 class VsScene {
   constructor(ch1, ch2, stageIdx, next, label) {
     this.a = ch1; this.b = ch2; this.st = stageIdx; this.next = next; this.t = 0; this.label = label; setTouchControls(false); AU.stopMusic();
-    this.pup = [new Puppet(), new Puppet()]; this.pup.forEach(p => p.play('enter'));
+    this.pup = [new Puppet(), new Puppet()]; this.pup[0].playMotion(ch1, 'intro'); this.pup[1].playMotion(ch2, 'intro');
   }
   update() {
     this.t++; const taps = tapQueue.splice(0);
     this.pup.forEach(p => p.update());
-    if (this.t === 30) { AU.sfx('hitS'); this.pup[0].play('taunt'); }
-    if (this.t === 70) this.pup[1].play('taunt');
-    if (this.t === 130) { this.pup[0].play('special'); this.pup[1].play('combo'); }
+    if (this.t === 30) AU.sfx('hitS');
+    if (this.t >= 130) { if (!this.pup[0].busy) this.pup[0].play('special'); if (!this.pup[1].busy) this.pup[1].play('combo'); }
     if (this.t === 32) AU.say(`${this.a.name.replace('02', 'zero two').replace('H1', 'H one')}. versus. ${this.b.name.replace('02', 'zero two').replace('H1', 'H one')}`, 0.4, 0.9);
     if (this.t > 220 || (this.t > 40 && (confirmPressed(pads[0]) || taps.length))) this.next();
   }
@@ -1397,13 +1400,16 @@ class ContinueScene {
 
 /* =================== RÉSULTAT VERSUS =================== */
 class ResultScene {
-  constructor(ch, side) { this.ch = ch; this.side = side; this.t = 0; setTouchControls(false); AU.playTrack(TRACKS.win); }
-  update() { this.t++; const taps = tapQueue.splice(0); if (this.t > 60 && (confirmPressed(pads[0]) || confirmPressed(pads[1]) || taps.length)) setScene(new SelectScene('versus')); }
+  constructor(ch, side) {
+    this.ch = ch; this.side = side; this.t = 0; setTouchControls(false); AU.playTrack(TRACKS.win); FX.clear();
+    this.pup = new Puppet(); this.pup.onFx = o => motionFire(o, ch, W / 2, 470, 2, 1); this.pup.playMotion(ch, 'victory');
+  }
+  update() { this.t++; FX.update(); this.pup.update(); const taps = tapQueue.splice(0); if (this.t > 60 && (confirmPressed(pads[0]) || confirmPressed(pads[1]) || taps.length)) setScene(new SelectScene('versus')); }
   draw() {
     const c = ctx; drawGridBg(c, this.t, this.ch.accent);
-    const pose = (this.t / 40 | 0) % 2 ? POSES.win : POSES.win2;
-    const sk = skeleton(this.ch, pose, 1, 2);
-    drawRobotAny(c, this.ch, pose, W / 2, 470, 1, 2);
+    const st = this.pup.state();
+    drawRobotAny(c, this.ch, st.pose, W / 2 + st.dx * 2, 470 - st.dy * 2, 1, 2, { yaw: st.yaw, st: 'win' });
+    FX.draw(c);
     bigTxt((this.side === 0 ? 'JOUEUR 1' : 'JOUEUR 2') + ' GAGNE !', W / 2, 70, 50);
     txt(this.ch.name, W / 2, 120, 20, { color: this.ch.accent, stroke: '#000', sw: 5 });
     txt('Appuyez pour rejouer', W / 2, 510, 11, { color: '#aaa', alpha: this.t % 60 < 40 ? 1 : 0.3 });
@@ -1412,9 +1418,13 @@ class ResultScene {
 
 /* =================== FIN (CHAMPION) =================== */
 class EndingScene {
-  constructor(ch, kind) { this.ch = ch; this.kind = kind; this.t = 0; setTouchControls(false); FX.clear(); AU.playTrack(TRACKS.win); AU.say('Congratulations! ' + ch.name + (kind === 'tour' ? ' wins the world tournament!' : ' is the world robot champion!'), 0.5, 0.9); }
+  constructor(ch, kind) {
+    this.ch = ch; this.kind = kind; this.t = 0; setTouchControls(false); FX.clear(); AU.playTrack(TRACKS.win);
+    this.pup = new Puppet(); this.pup.onFx = o => motionFire(o, ch, W / 2, 500, 2.1, 1); this.pup.playMotion(ch, 'victory');
+    AU.say('Congratulations! ' + ch.name + (kind === 'tour' ? ' wins the world tournament!' : ' is the world robot champion!'), 0.5, 0.9);
+  }
   update() {
-    this.t++; FX.update(); const taps = tapQueue.splice(0);
+    this.t++; FX.update(); this.pup.update(); const taps = tapQueue.splice(0);
     if (this.t % 25 === 0) {
       const x = rand(100, W - 100), y = rand(60, 260), col = pick(['#ff3fd2', '#3fa9ff', '#ffd23a', '#4dff88', this.ch.accent]);
       explosion(x, y, col, 0.7); AU.sfx('hitL');
@@ -1424,11 +1434,10 @@ class EndingScene {
   draw() {
     const c = ctx; drawGridBg(c, this.t, this.ch.accent);
     FX.draw(c);
-    const pose = lerpPose(POSES.win, POSES.taunt, (Math.sin(this.t * 0.05) + 1) / 2);
-    const sk = skeleton(this.ch, pose, 1, 2.1);
+    const st = this.pup.state();
     const g = c.createRadialGradient(W / 2, 330, 10, W / 2, 330, 260); g.addColorStop(0, hexA(this.ch.accent, 0.45)); g.addColorStop(1, hexA(this.ch.accent, 0));
     c.fillStyle = g; c.fillRect(0, 0, W, H);
-    drawRobotAny(c, this.ch, pose, W / 2, 500, 1, 2.1);
+    drawRobotAny(c, this.ch, st.pose, W / 2 + st.dx * 2.1, 500 - st.dy * 2.1, 1, 2.1, { yaw: st.yaw, st: 'win' });
     bigTxt('FÉLICITATIONS !', W / 2, 64, 56);
     txt(this.ch.name + (this.kind === 'tour' ? ' remporte le' : ' est le champion'), W / 2, 118, 16, { color: '#fff', stroke: '#000', sw: 5 });
     txt(this.kind === 'tour' ? 'TOURNOI MONDIAL DES ROBOTS !' : 'du monde des robots !', W / 2, 142, 16, { color: this.kind === 'tour' ? '#ffd23a' : '#fff', stroke: '#000', sw: 5 });

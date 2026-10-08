@@ -98,8 +98,10 @@ const ROSTER = [
    fs/fe : épaule/coude bras avant ; bs/be : bras arrière (0 = vers le bas, 90 = vers l'avant)
    fh/fk : hanche/genou jambe avant ; bh/bk : jambe arrière
    rot : rotation du corps entier ; sx : échelle horizontale (rotation sur soi-même) */
-const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx', 'grip', 'spin', 'twist', 'headSpin'];
-function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1, grip: 1, spin: 0, twist: 0, headSpin: 0 }; return Object.assign(p, o); }
+// kyf / kyb : rotation de la jambe avant / arrière autour de l'axe vertical de la hanche (radians, rendu 3D) :
+// genou armé sur le côté (fouetté, circulaire), jambe qui balaie un arc ; 0 = jambe dans le plan du combat
+const PKEYS = ['lean', 'hd', 'fs', 'fe', 'bs', 'be', 'fh', 'fk', 'bh', 'bk', 'rot', 'sx', 'grip', 'spin', 'twist', 'headSpin', 'kyf', 'kyb'];
+function mkPose(o) { const p = { lean: 0, hd: 0, fs: 0, fe: 0, bs: 0, be: 0, fh: 0, fk: 0, bh: 0, bk: 0, rot: 0, sx: 1, grip: 1, spin: 0, twist: 0, headSpin: 0, kyf: 0, kyb: 0 }; return Object.assign(p, o); }
 const POSES = {
   idle: mkPose({ lean: 8, hd: -4, fs: 50, fe: 100, bs: 28, be: 118, fh: 24, fk: 30, bh: -20, bk: 22 }),
   crouch: mkPose({ lean: 26, hd: -18, fs: 55, fe: 110, bs: 35, be: 115, fh: 78, fk: 125, bh: 22, bk: 128 }),

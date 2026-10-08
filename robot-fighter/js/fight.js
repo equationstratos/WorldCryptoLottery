@@ -363,7 +363,8 @@ class Fighter {
       case 'land':
         if (this.t >= this.landRec) { this.setSt('idle'); this.amv = null; }
         break;
-      case 'win': case 'lose': break;
+      case 'win': victoryEvents(this.ch, this.t, o => motionFire(o, this.ch, this.x + this.vdx * this.face, GROUND - this.vdy, 1, this.face)); break;
+      case 'lose': break;
     }
     // ---- physique
     if (this.st === 'held') { this.computeSkel(); return; }
@@ -596,7 +597,7 @@ class Fighter {
   computePose() {
     const t = this.t, st = this.st, ch = this.ch;
     const bob = Math.sin((performance.now() / 1000) * 5 + this.side) * 2.5;
-    let p;
+    let p; this.vYaw = null; this.vdx = 0; this.vdy = 0; // orientation / décalage visuels (célébration)
     switch (st) {
       case 'idle': case 'prejump': {
         p = { ...POSES.idle }; p.fe += bob; p.be -= bob; p.fk += bob; p.bk += bob * 0.6; p.lean += bob * 0.3;
@@ -646,7 +647,15 @@ class Fighter {
         if (ch.id === 'atlas') { p.rot = lerp(-90, -360, k); p.twist = (1 - k) * Math.PI; p.headSpin = (1 - k) * Math.PI * 2; } // roulade arrière contorsionniste
         break;
       }
-      case 'win': {
+      case 'win': { // célébration personnelle du robot (js/motions/<id>.js), sinon poses génériques
+        const seq = motionOf(ch, 'victory');
+        if (seq) {
+          const idle = { ...POSES.idle }; idle.fe += bob; idle.be -= bob; idle.fk += bob; idle.lean += bob * 0.3;
+          const m = motionSample(seq, victoryT(ch, t), idle), k = clamp(t / 10, 0, 1);
+          p = k < 1 ? lerpPose(POSES.idle, m.pose, easeOut(k)) : m.pose;
+          this.vYaw = lerp(-0.42, m.yaw, k); this.vdx = m.dx * k; this.vdy = m.dy * k;
+          break;
+        }
         p = lerpPose(POSES.idle, (this.side + ((t / 60) | 0)) % 2 ? POSES.win : POSES.win2, clamp(t / 12, 0, 1));
         if (ch.id === 'atlas') { p.twist = Math.sin(t * 0.045) * Math.PI; p.headSpin = -t * 0.09; }
         break;
@@ -714,6 +723,7 @@ class Fighter {
     else if (this.st === 'fall') this.hipY = this.y - 34;
     else if (this.y < GROUND - 0.5 || this.st === 'jump' || this.hover) this.hipY = Math.min(this.y - HIP_H * s, GROUND - this.skel._low);
     else this.hipY = GROUND - this.skel._low;
+    if (this.vdy) this.hipY -= this.vdy;
   }
   hurtbox(any = false) {
     if (this.st === 'down' || this.st === 'getup') return null;
@@ -760,7 +770,7 @@ class Fighter {
       c.fillStyle = g; c.beginPath(); c.arc(this.x, this.hipY - 30, 140, 0, 7); c.fill(); c.restore();
     }
     const pal = this.flash > 0 ? { body: '#ffffff', trim: '#ffe9a0', joint: '#ffffff', accent: '#fff', visor: '#fff' } : null;
-    drawRobot(c, ch, this.pose, this.x, this.hipY, this.face, 1, { skel: this.skel, pal });
+    drawRobot(c, ch, this.pose, this.x + (this.vdx || 0) * this.face, this.hipY, this.face, 1, { skel: this.skel, pal });
     if (this.meter >= 100 && F.frame % 20 < 10 && this.st !== 'super') {
       c.save(); c.globalCompositeOperation = 'lighter'; c.globalAlpha = 0.25;
       drawRobot(c, ch, this.pose, this.x, this.hipY, this.face, 1, { skel: this.skel, pal: { body: ch.accent, trim: ch.accent, joint: ch.accent, accent: ch.accent, visor: ch.accent }, noExtras: true });
