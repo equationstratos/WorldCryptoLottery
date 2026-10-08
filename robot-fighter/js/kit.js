@@ -408,10 +408,11 @@ const RK = (function () {
   const ang = (a, b) => Math.atan2(-(b.x - a.x), -(b.y - a.y)); // rotation Z qui amène +Y sur le segment a→b (repère 3D, y vers le haut)
   function setLimb(o, a, b, z) { o.position.set(a.x, -a.y, z); o.rotation.set(0, 0, ang(a, b)); }
   const UPPER = ['torso', 'neck', 'head', 'fua', 'ffa', 'fha', 'fel', 'fsc', 'bua', 'bfa', 'bha', 'bel', 'bsc'];
-  const qTw = new T.Quaternion(), vTw = new T.Vector3(), yAx = new T.Vector3(0, 1, 0);
+  const qTw = new T.Quaternion(), vTw = new T.Vector3(), yAx = new T.Vector3(0, 1, 0), xAx = new T.Vector3(1, 0, 0), vAx = new T.Vector3();
   // p.twist : rotation du haut du corps autour de l'axe vertical passant par la hanche (moteurs 360°)
   // p.headSpin : rotation de la tête sur elle-même ; z : décalage en profondeur (prises, projections)
   // p.kyf / p.kyb : rotation de la jambe avant / arrière autour de l'axe vertical de sa hanche
+  // p.axf / p.axb, p.hxf / p.hxb : écartement latéral des bras / des jambes (+ = vers l'extérieur)
   function pose(rb, p, x, hipY, face, yaw = -0.42, t = 0, st = '', z = 0) {
     const ch = rb.ch, P = rb.P;
     const pz = p.sx !== 1 ? Object.assign({}, p, { sx: 1 }) : p;
@@ -446,6 +447,23 @@ const RK = (function () {
     setLimb(P.neck, S.neck, S.head, 0);
     P.head.position.set(S.head.x, -S.head.y, 0); P.head.rotation.set(0, 0, ang(S.neck, S.head));
     if (p.headSpin) P.head.rotateY(p.headSpin);
+    // écartement latéral (abduction) : bras autour de l'axe avant du buste à l'épaule, jambes autour de l'axe avant à la hanche
+    if (p.axf || p.axb || p.hxf || p.hxb) {
+      const tl = Math.hypot(S.neck.x - S.hip.x, S.neck.y - S.hip.y) || 1;
+      vAx.set((S.hip.y - S.neck.y) / tl, (S.hip.x - S.neck.x) / tl, 0); // avant du buste (perpendiculaire au tronc)
+      for (const [sd, ax, hx, zz] of [['f', p.axf, p.hxf, 1], ['b', p.axb, p.hxb, -1]]) {
+        if (ax) {
+          qTw.setFromAxisAngle(vAx, -zz * ax);
+          const sp = S[sd + 'sh'], cx = sp.x, cy = -sp.y, cz = zz * rb.shZ;
+          for (const k of ['ua', 'fa', 'el', 'ha']) { const o = P[sd + k]; vTw.set(o.position.x - cx, o.position.y - cy, o.position.z - cz).applyQuaternion(qTw); o.position.set(cx + vTw.x, cy + vTw.y, cz + vTw.z); o.quaternion.premultiply(qTw); }
+        }
+        if (hx) {
+          qTw.setFromAxisAngle(xAx, -zz * hx);
+          const hp = S[sd + 'hi'], cx = hp.x, cy = -hp.y, cz = zz * rb.hpZ;
+          for (const k of ['th', 'sh', 'hi', 'kn', 'fo']) { const o = P[sd + k]; vTw.set(o.position.x - cx, o.position.y - cy, o.position.z - cz).applyQuaternion(qTw); o.position.set(cx + vTw.x, cy + vTw.y, cz + vTw.z); o.quaternion.premultiply(qTw); }
+        }
+      }
+    }
     if (p.twist) {
       qTw.setFromAxisAngle(yAx, p.twist);
       const hx = S.hip.x, hy = -S.hip.y;

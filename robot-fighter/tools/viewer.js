@@ -4,7 +4,7 @@
      id=optimus|atlas|...            robot
      view=sheet (défaut) | custom     planche complète ou vue unique
      plate=lab|warehouse|studio       décor de la vue principale / vue custom
-     pose=idle|hp|hk|lk|lp|crouch|proj|upper|win|taunt|block|hit|jump|chk|rush|down …
+     pose=idle|hp|hk|lk|lp|crouch|proj|upper|win|taunt|block|hit|jump|chk|rush|down …  (+clé:valeur pour modifier, ex. pose=win+axf:1.2+kyf:0.8)
      yaw=<radians>                    (custom) orientation : -0.42 = vue de combat, -1.57 = face, 0 = profil
      frame=full|head|hand|torso|legs|feet  (custom) cadrage
      w=, h=                            (custom) taille de l'image
@@ -32,8 +32,12 @@
   const pmrem = new T.PMREMGenerator(renderer);
   const roomEnv = pmrem.fromScene(new T.RoomEnvironment(), 0.04).texture;
 
+  // pose=nom[+clé:valeur...] : pose de POSES avec des clés remplacées (ex. win+axf:1.2+axb:1.2+twist:0.5)
   const poseOf = n => {
-    const p = POSES[n] || POSES.idle;
+    const [nm, ...kv] = String(n).split('+');
+    const p = { ...(POSES[nm] || POSES.idle) };
+    for (const e of kv) { const [k, v] = e.split(':'); if (k in p) p[k] = +v; }
+    p.sx = Math.cos(p.spin || 0);
     return p;
   };
   const place = (rb, p, yaw, t = 1) => { const S = skeleton(ch, p, 1); RK.pose(rb, p, 0, GROUND - S._low, 1, yaw, t, 'idle'); return S; };
