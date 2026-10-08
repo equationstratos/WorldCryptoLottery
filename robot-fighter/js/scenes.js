@@ -1063,7 +1063,7 @@ class ArenaSelectScene {
     if (!isRnd) {
       const home = ROSTER.filter(r => r.stage === show);
       home.forEach((r, i) => c.drawImage(portrait(r, 84), X + PW - 52 - i * 50, Y + 8, 44, 44));
-      if (home.length) txt('À DOMICILE', X + PW - 8, Y + 62, 7, { align: 'right', color: '#ffd23a', stroke: '#000', sw: 3 });
+      if (home.length) txt('A DOMICILE', X + PW - 8, Y + 62, 7, { align: 'right', color: '#ffd23a', stroke: '#000', sw: 3 });
     }
     // combattants
     if (GAME.c1) c.drawImage(portrait(P1C(), 84), 40, 150, 120, 120);
@@ -1079,7 +1079,7 @@ class ArenaSelectScene {
       c.strokeStyle = on ? '#ffd23a' : '#3a4250'; c.lineWidth = on ? 3 : 1.5; c.strokeRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
       if (on && this.t % 24 < 12) { c.strokeStyle = '#fff'; c.lineWidth = 1; c.strokeRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8); }
     }
-    txt(isTouch ? 'Touchez une arène puis l\'aperçu' : '◀ ▶ choisir   ·   ENTRÉE valider   ·   ÉCHAP retour', W / 2, 512, 9, { color: '#aaa' });
+    txt(isTouch ? 'Touchez une arène puis l\'aperçu' : '◀ ▶ choisir   ·   ENTREE valider   ·   ECHAP retour', W / 2, 512, 9, { color: '#aaa' });
     if (this.out) { c.fillStyle = `rgba(255,255,255,${Math.min(0.7, this.out / 20)})`; c.fillRect(0, 0, W, H); }
   }
 }
