@@ -197,7 +197,8 @@ class Fight {
   update() {
     // pause
     const startP = pads.some(p => p.pressed.start);
-    if ((escPressed || startP) && this.phase !== 'done') { this.paused = !this.paused; this.pauseSel = 0; this.showMoves = false; AU.sfx('select'); return; }
+    // ÉCHAP ouvre/ferme la pause ; START/ENTRÉE l'ouvre, et dans le menu valide l'option choisie
+    if ((escPressed || (startP && !this.paused)) && this.phase !== 'done') { this.paused = !this.paused; this.pauseSel = 0; this.showMoves = false; AU.sfx('select'); return; }
     if (this.paused) return this.updatePause();
     this.frame++;
     for (const k in this.combo) if (this.combo[k] && ++this.combo[k].t > 70) this.combo[k] = null;
