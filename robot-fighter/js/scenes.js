@@ -809,7 +809,7 @@ function puppetFx(kind, ch, x, footY, sc, face) {
   else if (kind === 'rise') { AU.sfx('rush'); for (let i = 0; i < 18; i++) FX.add({ type: 'spark', x: x + rand(-30, 30) * sc, y: footY - rand(0, 160) * sc, vx: rand(-2, 2), vy: rand(-12, -5), size: 2.5, life: 16, max: 16, col: ch.accent, len: 3 }); dust(x, footY, 10); }
   else if (kind === 'burst') { AU.sfx('hitS'); explosion(x, footY - 110 * sc, ch.accent, 1.3); }
 }
-function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H one'), 0.6, 0.95); }
+function sayName(ch) { AU.say(ch.name.replace('02', 'zero two').replace('H1', 'H one').replace('ASIMOV', 'Asimov'), 0.6, 0.95); }
 const DEMOS = ch => (ch.id === 'atlas' ? ['contort'] : []).concat(['combo', 'special', ch.move === 'uppercut' ? 'uppercut' : ch.move, 'kick', 'backkick', 'taunt']);
 
 /* =================== SÉLECTION =================== */
@@ -1099,7 +1099,7 @@ class VsScene {
     this.pup.forEach(p => p.update());
     if (this.t === 30) AU.sfx('hitS');
     if (this.t >= 130) { if (!this.pup[0].busy) this.pup[0].play('special'); if (!this.pup[1].busy) this.pup[1].play('combo'); }
-    if (this.t === 32) AU.say(`${this.a.name.replace('02', 'zero two').replace('H1', 'H one')}. versus. ${this.b.name.replace('02', 'zero two').replace('H1', 'H one')}`, 0.4, 0.9);
+    if (this.t === 32) AU.say(`${this.a.name.replace('02', 'zero two').replace('H1', 'H one').replace('ASIMOV', 'Asimov')}. versus. ${this.b.name.replace('02', 'zero two').replace('H1', 'H one').replace('ASIMOV', 'Asimov')}`, 0.4, 0.9);
     if (this.t > 220 || (this.t > 40 && (confirmPressed(pads[0]) || taps.length))) this.next();
   }
   draw() {

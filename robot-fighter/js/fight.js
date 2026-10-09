@@ -18,38 +18,45 @@ const NORMALS = {
   chp: { pose: 'chp', base: 'crouch', st: 6, ac: 6, rc: 18, dmg: 80, hs: 20, bs: 13, limb: 'fha', r: 24, kb: 7, lvl: 2, cancel: true },
   // low kick (MMA) dans le mollet
   clk: { pose: 'clkMMA', base: 'crouch', st: 6, ac: 3, rc: 11, dmg: 38, hs: 13, bs: 8, limb: 'ffo', r: 17, kb: 5, lvl: 1, h: 'low', cancel: true, name: 'LOW KICK',
-    keys: [[0, 'crouch'], [6, 'clkMMA', { spin: 0.5 }], [9, 'clkMMA', { spin: 0.5 }], [20, 'crouch']] },
+    keys: [[0, 'crouch'], [6, 'clkMMA'], [9, 'clkMMA'], [20, 'crouch']] },
   // balayage retourné : rotation complète au ras du sol, jambe arrière tendue
   chk: { pose: 'chkSpin', base: 'crouch', st: 8, ac: 6, rc: 22, dmg: 90, hs: 20, bs: 14, limb: 'bfo', r: 22, kb: 6, lvl: 2, h: 'low', kd: true, launch: -4, name: 'BALAYAGE',
     keys: [[0, 'crouch'], [7, 'chkSpin', { spin: 2.4 }], [11, 'chkSpin', { spin: 3.14 }], [15, 'chkSpin', { spin: 3.9 }], [24, 'crouch', { spin: 6.28 }], [36, 'crouch', { spin: 6.28 }]] },
   jlp: { pose: 'jp', base: 'jump', st: 4, ac: 30, rc: 0, dmg: 45, hs: 16, bs: 10, limb: 'fha', r: 18, kb: 4, lvl: 1, h: 'high' },
   jhp: { pose: 'jp', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 85, hs: 22, bs: 14, limb: 'fha', r: 21, kb: 6, lvl: 2, h: 'high' },
-  // chassé sauté (coup de pied latéral en l'air)
-  jlk: { pose: 'jk', base: 'jump', st: 4, ac: 30, rc: 0, dmg: 50, hs: 16, bs: 10, limb: 'ffo', r: 19, kb: 4, lvl: 1, h: 'high' },
+  // chassé sauté (coup de pied latéral en l'air) : genou replié en travers puis jambe poussée, hanches de profil
+  jlk: { pose: 'jk', base: 'jump', st: 4, ac: 30, rc: 0, dmg: 50, hs: 16, bs: 10, limb: 'ffo', r: 19, kb: 4, lvl: 1, h: 'high',
+    keys: [[0, 'jump'], [2, 'jkChamber'], [4, 'jk']] },
   // coup de pied tornade (360° en l'air)
   jhk: { pose: 'jhkT', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 90, hs: 22, bs: 14, limb: 'ffo', r: 22, kb: 6, lvl: 2, h: 'high', name: 'TORNADE',
-    keys: [[0, 'jump'], [6, 'jhkT', { spin: 6.28 }], [26, 'jhkT', { spin: 6.28 }]] },
+    keys: [[0, 'jump'], [6, 'jhkT', { spin: 6.28 + 1.75 }], [26, 'jhkT', { spin: 6.28 + 1.75 }]] },
   // ---- coups de commande (avant + bouton) ----
-  // chassé frontal / teep : repousse l'adversaire
-  flk: { pose: 'teep', st: 7, ac: 4, rc: 14, dmg: 55, hs: 16, bs: 10, limb: 'ffo', r: 20, kb: 18, lvl: 2, name: 'CHASSÉ FRONTAL',
+  // chassé latéral (savate / yoko-geri) : hanches tournées à 90°, talon poussé dans l'axe, repousse l'adversaire
+  flk: { pose: 'teep', st: 7, ac: 4, rc: 14, dmg: 55, hs: 16, bs: 10, limb: 'ffo', r: 20, kb: 18, lvl: 2, name: 'CHASSÉ LATÉRAL',
     keys: [[0, 'idle'], [4, 'teepChamber'], [7, 'teep'], [11, 'teep'], [16, 'teepChamber'], [25, 'idle']] },
   // coup de pied retourné (spinning back kick)
   fhk: { pose: 'backKick', st: 11, ac: 4, rc: 18, dmg: 115, hs: 24, bs: 16, limb: 'bfo', r: 23, kb: 15, lvl: 3, name: 'RETOURNÉ',
-    keys: [[0, 'idle'], [6, 'backTurn', { spin: 2.2 }], [11, 'backKick', { spin: 3.14 }], [15, 'backKick', { spin: 3.14 }], [24, 'backTurn', { spin: 4.6 }], [33, 'idle', { spin: 6.28 }]] },
+    keys: [[0, 'idle'], [6, 'backTurn', { spin: 2.2 }], [11, 'backKick', { spin: 3.64 }], [15, 'backKick', { spin: 3.64 }], [24, 'backTurn', { spin: 4.6 }], [33, 'idle', { spin: 6.28 }]] },
   // genou sauté (MMA)
   fhp: { pose: 'knee', st: 9, ac: 6, rc: 14, dmg: 100, hs: 24, bs: 15, limb: 'fkn', r: 24, kb: 8, lvl: 3, kd: true, launch: -7, name: 'GENOU SAUTÉ', hop: { at: 4, vx: 6, vy: -7.5 },
     keys: [[0, 'idle'], [4, 'crouch'], [9, 'knee'], [15, 'knee'], [22, 'jump'], [29, 'idle']] }
 };
-// pose interpolée d'un coup à images-clés (la rotation du corps projette aussi le squelette 2D : sx = cos(spin))
-function keyPose(keys, t) {
+// pose interpolée d'un coup à images-clés. La rotation du corps projette aussi le squelette 2D (zones de frappe) :
+// sx = cos(spin + ky<leg>), leg = jambe de frappe ('f' | 'b', d'après le membre de la hitbox 'ffo' / 'bfo').
+// Coups de pied « de côté » : hanches tournées (spin = θ) mais jambe de frappe ramenée dans l'axe du combat par
+// le pivot de sa hanche (kyf / kyb ≈ -θ) → le squelette 2D n'est pas écrasé et garde la portée de la jambe.
+// Sans ky (coups de poing, retourné, balayage) : sx = cos(spin) comme avant.
+function keyPose(keys, t, leg) {
   let i = 0; while (i < keys.length - 2 && t >= keys[i + 1][0]) i++;
   const a = keys[i], b = keys[i + 1] || a;
   const P = k => ({ ...(typeof k[1] === 'string' ? POSES[k[1]] : k[1]), ...(k[2] || {}) });
   const k = b === a ? 1 : clamp((t - a[0]) / Math.max(1, b[0] - a[0]), 0, 1);
   const p = lerpPose(P(a), P(b), k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
-  p.sx = Math.cos(p.spin || 0);
+  p.sx = Math.cos((p.spin || 0) + (leg ? p['ky' + leg] || 0 : 0));
   return p;
 }
+// jambe de frappe d'un coup ('f' | 'b') si sa hitbox est un pied, sinon ''
+const kickLeg = m => (m && m.limb && m.limb.endsWith('fo') ? m.limb[0] : '');
 const SPECIAL_MV = {
   proj: { dmg: 90, hs: 22, bs: 16, kb: 8, lvl: 3, chip: true },
   uppercut: { limb: 'fha', r: 26, dmg: 70, hs: 25, bs: 16, kb: 4, lvl: 3, kd: true, launch: -10, hits: 2, every: 8, chip: true },
@@ -621,7 +628,7 @@ class Fighter {
         if (t < 4) p = lerpPose(POSES.idle, POSES.jump, t / 4); else p = base;
         if (this.amv) {
           const m = this.amv, a = this.at;
-          if (m.keys) p = keyPose(m.keys, a);
+          if (m.keys) p = keyPose(m.keys, a, kickLeg(m));
           else { const k = a < m.st ? easeOut(a / m.st) : 1; p = lerpPose({ ...p, rot: 0 }, POSES[m.pose], k); }
         }
         break;
@@ -631,7 +638,7 @@ class Fighter {
       case 'held': p = this.heldPose || POSES.hit; break;
       case 'attack': {
         const m = this.mv, base = POSES[m.base || 'idle'], strike = POSES[m.pose];
-        if (m.keys) p = keyPose(m.keys, t);
+        if (m.keys) p = keyPose(m.keys, t, kickLeg(m));
         else if (t < m.st) p = lerpPose(base, strike, easeOut(t / m.st) * 0.85);
         else if (t < m.st + m.ac) p = strike;
         else p = lerpPose(strike, base, easeIn((t - m.st - m.ac) / m.rc));

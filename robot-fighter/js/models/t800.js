@@ -199,6 +199,24 @@ if (typeof RK !== 'undefined' && RK) RK.models.t800 = (function () {
     }
     return prof(list);
   })();
+  // crâne d'endosquelette (skin ENDOSQUELETTE) : boîte crânienne haute et étroite, face verticale,
+  // mâchoire en U plus étroite que les pommettes, nuque qui remonte derrière la mandibule
+  const SK = prof([
+    { y: -11.2, xf: 0.8, xb: 0.6, z: 1.6, x0: 6.3, nf: 2.8, nb: 2.4 },
+    { y: -10.5, xf: 2.0, xb: 2.0, z: 3.5, x0: 5.8, nf: 2.8, nb: 2.4 },
+    { y: -9.2, xf: 2.8, xb: 3.3, z: 4.8, x0: 5.25, nf: 2.9, nb: 2.4 },
+    { y: -7.4, xf: 3.3, xb: 4.6, z: 5.6, x0: 4.9, nf: 2.9, nb: 2.4 },
+    { y: -5.6, xf: 3.6, xb: 6.4, z: 6.2, x0: 4.7, nf: 2.8, nb: 2.4 },
+    { y: -3.8, xf: 4.2, xb: 9.0, z: 7.0, x0: 4.3, nf: 2.7, nb: 2.4 },
+    { y: -1.8, xf: 5.2, xb: 11.0, z: 7.6, x0: 3.5 },
+    { y: 0.8, xf: 7.2, xb: 11.9, z: 7.95, x0: 1.8 },
+    { y: 3.6, xf: 8.6, xb: 11.1, z: 8.15, x0: 0.6 },
+    { y: 6.6, xf: 8.5, xb: 10.3, z: 7.6, x0: 0 },
+    { y: 9.0, xf: 6.9, xb: 8.4, z: 6.1, x0: 0 },
+    { y: 10.6, xf: 4.2, xb: 5.2, z: 3.8, x0: 0 },
+    { y: 11.3, xf: 1.6, xb: 2.0, z: 1.5, x0: 0 },
+    { y: 11.45, xf: 0.3, xb: 0.3, z: 0.3, x0: 0 }
+  ].map(s => Object.assign({ nf: 2.5, nb: 2.3 }, s)));
   // buste (origine = bassin)
   const TB = prof([
     { y: 20.5, xf: 7.0, xb: 6.8, z: 8.0 },
@@ -303,7 +321,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.t800 = (function () {
        shell (coques blanches) · shoe (dessus des chaussures) · grey (disques, cadres gris) · dark (gris foncé)
        dark2 (anthracite) · plate (plastron bleu nuit) · visor · black · seam · steel · rubber · orange (accents)
        palm / finger (main) · waist (anneaux de la taille) · logo / hot / strip (lumières : logo, arc chaud, filets LED)
-       eye (yeux des skins à crâne)
+       eye / tooth / socket (yeux, dents, lueur des orbites des skins à crâne)
      Valeur : paramètres de ctx.mat (+ pat/ps/rk : motif triplanaire, inner/ii : lueur interne),
               { glow, i } pour un matériau émissif, ou le nom d'un autre emplacement.
      geo : 'endo' → géométrie propre au skin (crâne à mâchoire et yeux rouges, côtes, vérins hydrauliques, câbles).
@@ -313,19 +331,22 @@ if (typeof RK !== 'undefined' && RK) RK.models.t800 = (function () {
     // crâne à dents et yeux rouges incandescents, noyau d'énergie rouge
     endo: {
       geo: 'endo',
-      shell: { color: 0xe2e6ec, pat: 'endo', ps: 1 / 22, rk: 0.5, roughness: 0.24, metalness: 0.8, clearcoat: 0.7, clearcoatRoughness: 0.06, envMapIntensity: 1.5 },
-      shoe: 'shell', plate: 'shell', waist: 'shell',
-      grey: { color: 0xc4c9d0, pat: 'brush', ps: 1 / 14, rk: 0.35, roughness: 0.28, metalness: 0.85, clearcoat: 0.4, clearcoatRoughness: 0.12, envMapIntensity: 1.35 },
+      // (alliage poli-brossé sans vernis : un chrome miroir verni renvoyait les spots néon des arènes bien au-delà
+      //  du seuil du bloom → grosses taches roses ; rugosité 0.36 = reflets larges, chrome encore lisible)
+      shell: { color: 0xe4e8ed, pat: 'endo', ps: 1 / 22, rk: 0.5, roughness: 0.36, metalness: 0.72, envMapIntensity: 1.15 },
+      shoe: 'shell', plate: 'shell', waist: 'dark',
+      grey: { color: 0xc4c9d0, pat: 'brush', ps: 1 / 14, rk: 0.35, roughness: 0.36, metalness: 0.85, envMapIntensity: 1.05 },
       dark: { color: 0x44474e, pat: 'brush', ps: 1 / 14, rk: 0.3, roughness: 0.36, metalness: 0.9, envMapIntensity: 1.0 },
       dark2: { color: 0x26282c, roughness: 0.3, metalness: 0.95, envMapIntensity: 0.9 },
       black: { color: 0x0e0f11, roughness: 0.3, metalness: 0.85, envMapIntensity: 0.7 },
-      steel: { color: 0xeef1f5, roughness: 0.08, metalness: 1, envMapIntensity: 1.35 },
+      steel: { color: 0xeef1f5, roughness: 0.12, metalness: 1, envMapIntensity: 1.1 },
       rubber: { color: 0x1d1e22, roughness: 0.4, metalness: 0.9, envMapIntensity: 0.7 },
       orange: 'dark2',
       palm: { color: 0x585c63, roughness: 0.26, metalness: 1, envMapIntensity: 1.1 },
       finger: 'shell',
-      logo: { glow: 0xff2410, i: 3.0 }, hot: { glow: 0xff8a70, i: 2.6 }, strip: { glow: 0xff2a14, i: 3.2 },
-      eye: { glow: 0xff1a08, i: 7.5 }
+      logo: { glow: 0xff2410, i: 2.4 }, hot: { glow: 0xff8a70, i: 1.8 }, strip: { glow: 0xff2a14, i: 1.5 },
+      eye: { glow: 0xff1a08, i: 9 }, socket: { glow: 0xff2008, i: 0.8 },
+      tooth: { color: 0xe4e8ed, roughness: 0.3, metalness: 0.55, clearcoat: 0.6, clearcoatRoughness: 0.1, envMapIntensity: 1.2 }
     }
   };
 
@@ -436,6 +457,7 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
     // emplacements propres aux skins (classic : le matériau d'origine de la pièce, aucun nouveau matériau)
     const WST = pick('waist', () => DK);
     const EYE = ENDO && !low ? pick('eye', () => ctx.glow(0xff1a08, 7)) : null;
+    const TT = ENDO && !low ? pick('tooth', () => ST) : null, SOCK = ENDO && !low ? pick('socket', () => ctx.glow(0xff2008, 0.45)) : null;
 
     /* =====================================================
        SKIN ENDOSQUELETTE : géométrie propre (crâne, côtes, vertèbres, vérins hydrauliques, câbles) — jamais en LOD bas.
@@ -454,30 +476,36 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       Ls.dk.push(rodIt(mix3(a, b, -0.03), m, r, 8), rodIt(mix3(a, b, k - 0.07), m, r * 1.18, 8));
       Ls.st.push(rodIt(m, mix3(a, b, 1.04), r * 0.44, 6));
     };
-    const cable = (Ls, pts, r) => Ls.bk.push([g.tube(pts.map(p => p.map(v => +v.toFixed(2))), r, 10, 4)]);
+    const cable = (Ls, pts, r) => Ls.bk.push([g.tube(pts.map(p => p.map(v => +v.toFixed(2))), r, 8, 4)]);
     const endoAdd = (gr, key, Ls) => {
       if (Ls.dk.length) add(gr, fuse('t8En' + key + 'D', Ls.dk), DK2);
       if (Ls.st.length) add(gr, fuse('t8En' + key + 'S', Ls.st), ST);
       if (Ls.bk.length) add(gr, fuse('t8En' + key + 'B', Ls.bk), BK);
     };
     const Sd = (tab, th, y, off) => SP(tab, th * D, y, off);
-    // membres : vérins « muscles » + câbles (repère de la pièce : avant = -X, extérieur = +Z)
+    /* membres « os + vérins » : à la place des coques, deux os chromés (avant / arrière) laissent deux fenêtres
+       (extérieur / intérieur) sur le noyau gunmetal enfoncé, où courent un vérin hydraulique et un câble.
+       (repère de la pièce : avant = -X = theta 180°, extérieur = +Z = theta 90°) */
+    const LIMB_E = {
+      //    profil, os avant [th0, th1], os arrière, y0, y1, vérin [y0, y1, rayon, prof.], câble (theta ext.)
+      ua: { tab: UA, f: [146, 214], b: [-34, 34], y0: 8.6, y1: 24.2, p: [6.2, 26.6, 1.15, -1.05], c: 58 },
+      fa: { tab: FA, f: [148, 212], b: [-32, 32], y0: 3.4, y1: 24.8, p: [2.6, 26.0, 0.95, -0.95], c: 56 },
+      th: { tab: TH, f: [134, 206], b: [-38, 38], y0: 10.2, y1: 34.6, p: [7.0, 38.0, 1.45, -1.25], c: 62 },
+      sh: { tab: SH, f: [136, 224], b: [-30, 30], y0: 6.8, y1: 34.0, by1: 27.0, p: [4.2, 35.6, 1.2, -1.1], c: 60 }
+    };
     function endoLimb(gr, kind) {
       if (!ENDO || low) return;
-      const Ls = { dk: [], st: [], bk: [] };
-      if (kind === 'ua') {
-        piston(Ls, Sd(UA, 150, 5.6, 1.45), Sd(UA, 150, 28.2, 1.45), 1.05);
-        cable(Ls, [Sd(UA, 52, 3.5, 0.5), Sd(UA, 58, 12, 1.15), Sd(UA, 58, 21, 1.15), Sd(UA, 52, 29.5, 0.5)], 0.42);
-      } else if (kind === 'fa') {
-        piston(Ls, Sd(FA, 148, 3.8, 1.3), Sd(FA, 148, 24.0, 1.3), 0.9);
-        cable(Ls, [Sd(FA, 36, 2.5, 0.4), Sd(FA, 40, 10, 1.0), Sd(FA, 40, 19, 1.0), Sd(FA, 36, 26, 0.4)], 0.4);
-      } else if (kind === 'th') {
-        piston(Ls, Sd(TH, 146, 7.5, 1.7), Sd(TH, 146, 37.5, 1.7), 1.4);
-        piston(Ls, Sd(TH, 28, 8.5, 1.5), Sd(TH, 28, 35.0, 1.5), 1.15, 0.5);
-        cable(Ls, [Sd(TH, 112, 4.5, 0.5), Sd(TH, 116, 16, 1.25), Sd(TH, 116, 30, 1.25), Sd(TH, 112, 40, 0.5)], 0.5);
-      } else if (kind === 'sh') {
-        piston(Ls, Sd(SH, 36, 6.0, 1.45), Sd(SH, 36, 33.5, 1.45), 1.15);
-        cable(Ls, [Sd(SH, 128, 5, 0.6), Sd(SH, 132, 16, 1.2), Sd(SH, 132, 28, 1.2), Sd(SH, 128, 37, 0.5)], 0.45);
+      const E = LIMB_E[kind], tab = E.tab;
+      // os chromés (paroi profonde jusqu'au noyau)
+      const bf = patch('t8EnB' + kind + 'F', { tab, map: band(E.f[0] * D, E.f[1] * D, E.y0, E.y1), nu: 6, nv: 6, off: 0.15, c: 0.5, t: 2.5 });
+      const bb = patch('t8EnB' + kind + 'B', { tab, map: band(E.b[0] * D, E.b[1] * D, E.y0, E.by1 || E.y1), nu: 6, nv: 6, off: 0.15, c: 0.5, t: 2.5 });
+      add(gr, F('enBone' + kind, [[bf], [bb]]), WH);
+      // vérins (fenêtres extérieure et intérieure) + câbles
+      const Ls = { dk: [], st: [], bk: [] }, p = E.p;
+      for (const th of [90, 270]) {
+        piston(Ls, Sd(tab, th, p[0], p[3]), Sd(tab, th, p[1], p[3]), p[2], 0.56);
+        const tc = th === 90 ? E.c : 360 - E.c, yl = E.y0 + 0.8, yh = (E.by1 || E.y1) - 0.8;
+        cable(Ls, [Sd(tab, tc, yl - 2.5, -0.2), Sd(tab, tc + 4, yl + 2, -1.3), Sd(tab, tc + 4, yh - 2, -1.3), Sd(tab, tc, yh + 2.5, -0.2)], 0.48);
       }
       endoAdd(gr, kind, Ls);
     }
@@ -536,7 +564,8 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       /* --- buste --- */
       add(torso, full('t8TBcore', TB, 20.5, 63.0, 12, 5, { off: -0.8, capB: true }), SE);
       // abdomen gris foncé (coupe)
-      add(torso, patch('t8Abd', { tab: TB, map: band(0, 2 * PI, 20.5, 50), closed: true, nu: 24, nv: 8, c: 0.55, t: 1.4 }), DK);
+      if (ENDO) add(torso, patch('t8AbdE', { tab: TB, map: band(0, 2 * PI, 20.5, 50), closed: true, nu: 24, nv: 8, off: -0.7, c: 0.55, t: 1.4 }), DK);
+      else add(torso, patch('t8Abd', { tab: TB, map: band(0, 2 * PI, 20.5, 50), closed: true, nu: 24, nv: 8, c: 0.55, t: 1.4 }), DK);
       // plastron central bleu nuit
       add(torso, patch('t8Plate', { tab: TB, map: shield(31.5, 52.9, PW), nu: 10, nv: 10, off: 0.85, c: 0.45, t: 1.7 }), NV);
       // pectoraux blancs (bord inférieur en diagonale, filet LED dessous)
@@ -599,10 +628,13 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       /* --- ENDOSQUELETTE : cage thoracique chromée, vertèbres dorsales, vérins abdominaux --- */
       if (ENDO) {
         const rib = (key, y0) => patch(key, { tab: TB, map: (u, v) => { const th = lerp(PWF(y0) + 3 * D, 116 * D, u); return [th, y0 - 1.6 * Math.pow(1 - u, 1.6) + v * 1.55]; }, nu: 12, nv: 1, off: 0.8, c: 0.4, t: 1.5 });
-        const ribL = (key, y0) => patch(key, { tab: TB, map: (u, v) => { const th = lerp(-116 * D, 116 * D, u); return [th, y0 - 1.4 * Math.pow(1 - Math.abs(2 * u - 1), 1.5) + v * 1.5]; }, nu: 24, nv: 1, off: 0.75, c: 0.4, t: 1.5 });
-        const r1 = rib('t8EnRib1', 31.8), r2 = rib('t8EnRib2', 35.2), r3 = rib('t8EnRib3', 38.6);
-        add(torso, F('enRibs', [[r1], [r1, MZ], [r2], [r2, MZ], [r3], [r3, MZ], [ribL('t8EnRibL1', 25.0)], [ribL('t8EnRibL2', 28.3)]]), WH);
+        // côtes basses : deux demi-arcs (la colonne lombaire reste visible au centre)
+        const ribL = (key, y0) => patch(key, { tab: TB, map: (u, v) => { const th = lerp(13 * D, 116 * D, u); return [th, y0 - 1.4 * Math.pow(1 - u, 1.5) + v * 1.5]; }, nu: 12, nv: 1, off: 0.75, c: 0.4, t: 2.4 });
+        const r1 = rib('t8EnRib1', 31.8), r2 = rib('t8EnRib2', 35.2), r3 = rib('t8EnRib3', 38.6), l1 = ribL('t8EnRibL1', 25.0), l2 = ribL('t8EnRibL2', 28.3);
+        add(torso, F('enRibs', [[r1], [r1, MZ], [r2], [r2, MZ], [r3], [r3, MZ], [l1], [l1, MZ], [l2], [l2, MZ]]), WH);
         add(torso, fuse('t8EnVert', Array.from({ length: 8 }, (_, i) => [g.cbox(3.6, 1.6, 2.1, 0.4), null, frame(TB, PI, 32.4 + i * 2.95, 0.7)])), WH);
+        // colonne avant (vertèbres lombaires visibles dans l'abdomen ouvert, du bassin au plastron)
+        add(torso, fuse('t8EnLumb', [12.6, 14.8, 17.0, 19.2, 21.4, 23.6, 25.8, 28.0, 30.2].map(y => [g.cbox(3.4, 1.9, 1.7, 0.45), null, y < 21 ? frame(WB, 0, y, 0.5) : frame(TB, 0, y, -0.25)])), WH);
         const Ls = { dk: [], st: [], bk: [] };
         for (const zz of [1, -1]) {
           const M3 = p => [p[0], p[1], p[2] * zz];
@@ -641,58 +673,69 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
        (skin ENDOSQUELETTE : crâne chromé à la place du casque)
        ===================================================== */
     if (ENDO) {
-      /* boîte crânienne chromée à joints, arcades froncées en relief, orbites profondes (yeux rouges incandescents
-         sertis d'acier), arête nasale, cavité nasale en poire, pommettes, deux rangées de dents,
-         mandibule saillante à charnières et petits vérins de mâchoire */
+      /* crâne propre (profil SK) : boîte crânienne chromée à joints, arcade froncée très saillante au-dessus
+         d'orbites profondes (noyau noir), yeux rouges incandescents sertis d'acier, arête nasale, cavité nasale
+         en poire, pommettes et arcades zygomatiques, maxillaire + deux rangées de dents, joues ouvertes
+         (vérins de mâchoire visibles), mandibule en U à branches montantes et charnières */
       const h = ctx.group();
-      const dome = (y0, y1) => (u, v) => { const th = u * 2 * PI - PI; return [th, lerp(fv(y0, th), y1, Math.sin(v * PI / 2))]; };
-      add(h, full('t8HDcore', HEAD, -9.8, 11.4, 16, 6, { off: -0.6, capB: true, map: dome(-9.8, 11.4) }), SE);
       const A = th => Math.abs(th);
-      const BROW = th => 1.15 + 1.25 * Math.min(1, A(th) / (56 * D));                       // bas de l'arcade (froncée au centre)
-      const CRB = th => {                                                                       // bas de la boîte crânienne
+      const dome = (y0, y1) => (u, v) => { const th = u * 2 * PI - PI; return [th, lerp(fv(y0, th), y1, Math.sin(v * PI / 2))]; };
+      add(h, full('t8SkCore', SK, -11.2, 11.45, 18, 10, { off: -0.7, capB: true }), SE);
+      const EI = 9.5 * D, EO = 45 * D, EB = -2.55, EC = 27.5 * D, EY = -0.6;                 // orbite : bords int. / ext., bas, centre
+      const eyeT = th => clamp01((A(th) - EI) / (EO - EI));
+      // bas de l'arcade : glabelle basse (froncement), arc au-dessus de chaque orbite, retombée vers la tempe
+      const BROW = th => { const a = A(th); return a < EI ? 0.55 + 0.35 * a / EI : a < EO ? 0.9 + 0.95 * Math.sin(eyeT(th) * PI * 0.92) : 1.02 + 0.6 * sstep((a - EO) / (20 * D)); };
+      // haut de la pommette : arrondit le bas de l'orbite
+      const EBc = th => EB - 0.25 - 0.55 * Math.sin(eyeT(th) * PI);
+      const CRB = th => {                                                                        // bas de la boîte crânienne
         const a = A(th);
-        if (a < 50 * D) return BROW(th) + 1.8;
-        if (a < 66 * D) return lerp(BROW(50 * D) + 1.8, -2.1, sstep((a - 50 * D) / (16 * D)));
-        if (a < 100 * D) return -2.1;
-        return lerp(-2.1, HBOT(th) + 0.2, sstep((a - 100 * D) / (26 * D)));
+        if (a < 48 * D) return BROW(th) + 1.95;
+        if (a < 66 * D) return lerp(BROW(48 * D) + 1.95, -2.45, sstep((a - 48 * D) / (18 * D)));
+        if (a < 102 * D) return -2.45;                                                          // tempe : jusqu'à l'arcade zygomatique
+        if (a < 124 * D) return lerp(-2.45, -4.9, sstep((a - 102 * D) / (22 * D)));             // derrière la charnière (os temporal)
+        return lerp(-4.9, -5.4, sstep((a - 124 * D) / (40 * D)));
       };
-      const EI = 11 * D, EO = 47 * D, EB = -1.9, EC = 29 * D;                                  // orbite : bords int. / ext., bas, centre
-      const NOSE = y => lerp(9.4 * D, 3.0 * D, clamp01((y + 4.75) / 2.85));                     // demi-largeur de la cavité nasale
-      const JT = th => { const a = A(th); return a < 50 * D ? -7.85 : lerp(-7.85, -3.3, sstep((a - 50 * D) / (18 * D))); };
-      const skull = [], skullSE = [], dk = [], st = [];
-      skull.push([full('t8SkCran', HEAD, 0, 0, 40, 10, { c: 0.4, t: 1.0, map: dome(CRB, 11.4) })]);
-      skull.push([patch('t8SkBrow', { tab: HEAD, map: band(-62 * D, 62 * D, BROW, th => BROW(th) + 2.25), nu: 22, nv: 2, off: 1.05, c: 0.5, t: 1.7 })]);
-      skull.push([patch('t8SkBridge', { tab: HEAD, map: band(-EI, EI, EB, th => BROW(th) + 0.3), nu: 4, nv: 4, off: 0.7, c: 0.35, t: 1.4 })]);
-      skull.push([patch('t8SkMax', { tab: HEAD, map: band(-44 * D, 44 * D, -5.0, -4.55), nu: 14, nv: 1, off: 0.62, c: 0.2, t: 1.0 })]);
-      const rim = patch('t8SkRim', { tab: HEAD, map: band(EO, 64 * D, EB - 0.2, th => BROW(th) + 0.4), nu: 4, nv: 4, off: 0.85, c: 0.4, t: 1.5 });
-      const cheek = patch('t8SkCheek', { tab: HEAD, map: (u, v) => { const y = lerp(-4.75, EB, v); return [lerp(NOSE(y), 78 * D, u), y]; }, nu: 14, nv: 3, off: 0.62, c: 0.4, t: 1.4 });
-      skull.push([rim], [rim, MZ], [cheek], [cheek, MZ]);
-      skull.push([patch('t8SkJaw', { tab: HEAD, map: (u, v) => { const th = lerp(-86 * D, 86 * D, u); return [th, lerp(HBOT(th) + 0.35, JT(th), v)]; }, nu: 30, nv: 5, off: 0.95, c: 0.5, t: 1.8 })]);
+      const NOSE = y => lerp(8.8 * D, 2.4 * D, clamp01((y + 4.75) / 2.2));                     // demi-largeur de la cavité nasale
+      const JT = th => { const a = A(th); return a < 42 * D ? -8.5 : lerp(-8.5, -3.95, sstep((a - 42 * D) / (34 * D))); };
+      const JB = th => -11.0 + 2.8 * sstep((A(th) - 24 * D) / (66 * D));
+      const skull = [], skullSE = [], dk = [], st = [], teeth = [];
+      skull.push([full('t8SkCran', SK, 0, 0, 32, 9, { c: 0.4, t: 1.1, map: dome(CRB, 11.45) })]);
+      skull.push([patch('t8SkBrow', { tab: SK, map: band(-64 * D, 64 * D, BROW, th => BROW(th) + 2.0), nu: 22, nv: 2, off: 1.15, c: 0.5, t: 2.0 })]);
+      skull.push([patch('t8SkBridge', { tab: SK, map: band(-EI, EI, EB - 0.2, th => BROW(th) + 0.3), nu: 4, nv: 4, off: 0.8, c: 0.35, t: 1.6 })]);
+      skull.push([patch('t8SkMax', { tab: SK, map: band(-46 * D, 46 * D, -5.25, -4.7), nu: 14, nv: 1, off: 0.75, c: 0.2, t: 1.4 })]);
+      const rim = patch('t8SkRim', { tab: SK, map: band(EO, 64 * D, EB - 0.2, th => BROW(th) + 0.4), nu: 4, nv: 4, off: 1.0, c: 0.4, t: 1.8 });
+      const cheek = patch('t8SkCheek', { tab: SK, map: (u, v) => { const th = lerp(NOSE(lerp(-4.75, EB, v)), 74 * D, u); return [th, lerp(-4.75, EBc(th), v)]; }, nu: 14, nv: 3, off: 0.8, c: 0.4, t: 1.6 });
+      const zyg = patch('t8SkZyg', { tab: SK, map: band(73 * D, 102 * D, -3.75, -2.55), nu: 6, nv: 1, off: 0.65, c: 0.3, t: 1.3 });
+      skull.push([rim], [rim, MZ], [cheek], [cheek, MZ], [zyg], [zyg, MZ]);
+      skull.push([patch('t8SkJaw', { tab: SK, map: (u, v) => { const th = lerp(-94 * D, 94 * D, u); return [th, lerp(JB(th), JT(th), v)]; }, nu: 30, nv: 5, off: 0.9, c: 0.5, t: 1.8 })]);
       add(h, F('skull', skull), WH);
       // joints du crâne (sagittal avant / arrière, tempes)
-      skullSE.push([patch('t8SkSag', { tab: HEAD, map: band(-0.8 * D, 0.8 * D, BROW(0) + 2.6, 11.2), nu: 1, nv: 6, off: 0.06, c: 0.08, t: 0.4 })]);
-      skullSE.push([patch('t8SkSagB', { tab: HEAD, map: band(PI - 0.8 * D, PI + 0.8 * D, -5.0, 11.2), nu: 1, nv: 8, off: 0.06, c: 0.08, t: 0.4 })]);
-      const tmp = patch('t8SkTemple', { tab: HEAD, map: (u, v) => { const th = lerp(70 * D, 150 * D, u); return [th, 2.6 + 2.2 * Math.sin(u * PI) + (v - 0.5) * 0.45]; }, nu: 10, nv: 1, off: 0.06, c: 0.08, t: 0.4 });
+      skullSE.push([patch('t8SkSag', { tab: SK, map: band(-0.8 * D, 0.8 * D, BROW(0) + 2.4, 11.2), nu: 1, nv: 6, off: 0.06, c: 0.08, t: 0.4 })]);
+      skullSE.push([patch('t8SkSagB', { tab: SK, map: band(PI - 0.8 * D, PI + 0.8 * D, -5.0, 11.2), nu: 1, nv: 8, off: 0.06, c: 0.08, t: 0.4 })]);
+      const tmp = patch('t8SkTemple', { tab: SK, map: (u, v) => { const th = lerp(66 * D, 150 * D, u); return [th, 2.4 + 2.4 * Math.sin(u * PI) + (v - 0.5) * 0.45]; }, nu: 10, nv: 1, off: 0.06, c: 0.08, t: 0.4 });
       skullSE.push([tmp], [tmp, MZ]);
       add(h, F('skullSE', skullSE), SE);
-      // dents : deux rangées (polies), interstices sombres (noyau du crâne)
+      // dents : deux rangées longues (acier poli), interstices sombres (noyau du crâne)
       for (let i = 0; i < 6; i++) for (const sg of [1, -1]) {
-        st.push([g.cbox(1.02, 1.6, 1.42, 0.24), null, frame(HEAD, sg * (3.3 + 6.5 * i) * D, -5.55, 0.22)]);
-        st.push([g.cbox(0.98, 1.6, 1.4, 0.24), null, frame(HEAD, sg * (3.2 + 6.2 * i) * D, -7.12, 0.28)]);
+        teeth.push([g.box(0.8, 1.5, 1.55), null, frame(SK, sg * (3.2 + 6.3 * i) * D, -6.0, 0.15)]);
+        teeth.push([g.box(0.78, 1.5, 1.5), null, frame(SK, sg * (3.2 + 6.1 * i) * D, -7.62, 0.15)]);
       }
-      // charnières de mâchoire (disques chromés à moyeu sombre) + petits vérins pommette → mandibule
+      // charnières de mâchoire (disques chromés à moyeu sombre) + petits vérins pommette → mandibule (joues ouvertes)
       for (const sg of [1, -1]) {
-        const fr = frame(HEAD, sg * 88 * D, -3.7, 0.95);
-        st.push([g.ccyl(2.15, 1.0, 0.3, 14), null, fr], [g.cyl(0.5, 0.5, 1.5, 6), null, mul(fr, MT([0, 0.45, 0]))]);
-        dk.push([g.ccyl(1.35, 1.1, 0.25, 12), null, mul(fr, MT([0, 0.12, 0]))]);
+        const fr = frame(SK, sg * 90 * D, -4.4, 0.95);
+        st.push([g.ccyl(1.9, 1.0, 0.3, 14), null, fr], [g.cyl(0.45, 0.45, 1.5, 6), null, mul(fr, MT([0, 0.45, 0]))]);
+        dk.push([g.ccyl(1.2, 1.1, 0.25, 12), null, mul(fr, MT([0, 0.12, 0]))]);
         const Ls = { dk, st, bk: [] };
-        piston(Ls, Sd(HEAD, sg * 76, -1.1, 0.95), Sd(HEAD, sg * 75, -7.7, 1.45), 0.48, 0.5);
-        // yeux : bague d'acier sombre + lentille rouge incandescente (au fond de l'orbite)
-        dk.push([g.torus(1.5, 0.3, 16, 4, PI * 2, 'y'), null, frame(HEAD, sg * EC, -0.05, -0.12)]);
+        piston(Ls, Sd(SK, sg * 62, -3.3, 0.1), Sd(SK, sg * 60, -8.6, 0.55), 0.42, 0.5);
+        // yeux : bague d'acier sombre au fond de l'orbite
+        dk.push([g.torus(1.02, 0.25, 16, 4, PI * 2, 'y'), null, frame(SK, sg * EC, EY, -0.62)]);
       }
       add(h, fuse('t8SkSt', st), ST);
+      add(h, fuse('t8SkTeeth', teeth), TT);
       add(h, fuse('t8SkDk', dk), DK2);
-      add(h, fuse('t8SkEyes', [1, -1].map(sg => [g.sphere(1.1, 12, 8), SP(HEAD, sg * EC, -0.05, -0.4)])), EYE);
+      add(h, fuse('t8SkEyes', [1, -1].map(sg => [g.sphere(0.74, 12, 8), SP(SK, sg * EC, EY, -1.02)])), EYE);
+      // lueur rouge diffuse au fond des orbites (lisible de loin : toute l'orbite rougeoie autour de l'œil)
+      add(h, fuse('t8SkSocket', [1, -1].map(sg => [g.cyl(1.4, 1.4, 0.1, 16), null, mul(frame(SK, sg * EC, EY - 0.1, -0.66), MT([0, 0, 0], [0, 0, 0], [1, 1, 1.2]))])), SOCK);
       P.head = ctx.group(h);
     } else {
       const h = ctx.group();
@@ -816,11 +859,14 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       });
       /* ---------- bras ---------- */
       P[sd + 'ua'] = sidePart(z, gr => {
-        add(gr, full('t8UAcore', UA, 0, 33, 10, 3, { off: -0.9 }), DK);
+        if (ENDO) add(gr, full('t8UAcoreE', UA, 0, 33, 12, 3, { off: -2.3 }), DK);
+        else add(gr, full('t8UAcore', UA, 0, 33, 10, 3, { off: -0.9 }), DK);
         add(gr, full('t8UAring', UA, 2.6, 8.0, 20, 2, { off: 0.05, c: 0.35, t: 0.9 }), DK);
         add(gr, full('t8UAring2', UA, 5.0, 5.5, 20, 1, { off: 0.1, c: 0.1, t: 0.5 }), GR);
-        add(gr, patch('t8UAout', { tab: UA, map: band(-52 * D, 126 * D, 8.6, 23.6), nu: 14, nv: 6 }), WH);
-        add(gr, patch('t8UAin', { tab: UA, map: band(129 * D, 305 * D, 8.6, 23.6), nu: 14, nv: 6 }), WH);
+        if (!ENDO) {
+          add(gr, patch('t8UAout', { tab: UA, map: band(-52 * D, 126 * D, 8.6, 23.6), nu: 14, nv: 6 }), WH);
+          add(gr, patch('t8UAin', { tab: UA, map: band(129 * D, 305 * D, 8.6, 23.6), nu: 14, nv: 6 }), WH);
+        }
         add(gr, full('t8UAband', UA, 24.2, 28.8, 28, 2, { off: 0.1, c: 0.35, t: 1.0 }), DK);
         add(gr, fuse('t8UAbolts', [50, 130, 230, 310].map(a => [g.cyl(0.42, 0.42, 0.5, 6), null, frame(UA, a * D, 26.5, 0.15)])), ST);
         add(gr, patch('t8UAor', { tab: UA, map: band(120 * D, 150 * D, 25.4, 27.4), nu: 3, nv: 1, off: 0.22, c: 0.12, t: 0.6 }), OR);
@@ -839,10 +885,13 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       });
       /* ---------- avant-bras ---------- */
       P[sd + 'fa'] = sidePart(z, gr => {
-        add(gr, full('t8FAcore', FA, 0, 31, 10, 3, { off: -0.9 }), DK);
-        add(gr, patch('t8FAtop', { tab: FA, map: band(-60 * D, 118 * D, 3.4, 24.6), nu: 14, nv: 6 }), WH);
-        add(gr, patch('t8FAbot', { tab: FA, map: band(121 * D, 297 * D, 3.4, 24.6), nu: 14, nv: 6 }), WH);
-        add(gr, F('stripes', [0, 1, 2, 3, 4].map(i => [patch('t8Stripe' + i, { tab: FA, map: slant(88 * D, 14.8 + i * 2.0, 34 * D, 0.85, 3.0), nu: 4, nv: 1, off: 0.1, c: 0.12, t: 0.5 })])), BK);
+        if (ENDO) add(gr, full('t8FAcoreE', FA, 0, 31, 12, 3, { off: -2.1 }), DK);
+        else {
+          add(gr, full('t8FAcore', FA, 0, 31, 10, 3, { off: -0.9 }), DK);
+          add(gr, patch('t8FAtop', { tab: FA, map: band(-60 * D, 118 * D, 3.4, 24.6), nu: 14, nv: 6 }), WH);
+          add(gr, patch('t8FAbot', { tab: FA, map: band(121 * D, 297 * D, 3.4, 24.6), nu: 14, nv: 6 }), WH);
+          add(gr, F('stripes', [0, 1, 2, 3, 4].map(i => [patch('t8Stripe' + i, { tab: FA, map: slant(88 * D, 14.8 + i * 2.0, 34 * D, 0.85, 3.0), nu: 4, nv: 1, off: 0.1, c: 0.12, t: 0.5 })])), BK);
+        }
         add(gr, full('t8Cuff', FA, 25.2, 30.8, 24, 2, { off: 0.3, c: 0.35, t: 1.1 }), DK);
         add(gr, fuse('t8CuffBolts', [65, 115, 245, 295].map(a => [g.cyl(0.38, 0.38, 0.5, 6), null, frame(FA, a * D, 29.7, 0.36)])), ST);
         add(gr, full('t8CuffR', FA, 27.4, 28.0, 24, 1, { off: 0.42, c: 0.1, t: 0.6 }), DK2);
@@ -861,14 +910,20 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       /* ---------- cuisse : coque blanche, panneau gris encastré ---------- */
       P[sd + 'th'] = sidePart(z, gr => {
         const PC = 164 * D, PWd = 33 * D, y0 = 9.2, y1 = 34.6;
-        add(gr, full('t8THcore', TH, 0, 44, 10, 4, { off: -0.8 }), DK);
-        add(gr, patch('t8THmain', { tab: TH, map: band(PC + PWd + 1.5 * D, PC - PWd - 1.5 * D + 2 * PI, 5.6, 39.6), nu: 20, nv: 9, c: 0.5, t: 1.4 }), WH);
-        add(gr, patch('t8THtop', { tab: TH, map: band(PC - PWd - 1.5 * D, PC + PWd + 1.5 * D, 5.6, y0 - 0.5), nu: 8, nv: 1, c: 0.45, t: 1.4 }), WH);
-        add(gr, patch('t8THbot', { tab: TH, map: band(PC - PWd - 1.5 * D, PC + PWd + 1.5 * D, y1 + 0.5, 39.6), nu: 8, nv: 2, c: 0.45, t: 1.4 }), WH);
-        add(gr, patch('t8THpanel', { tab: TH, map: shield(y0, y1, ovalW(y0, y1, PWd, 4), PC), nu: 10, nv: 12, off: -0.45, c: 0.3, t: 0.6 }), DK);
-        add(gr, patch('t8THinner', { tab: TH, map: (u, v) => { const y = lerp(17, 39.2, v); return [lerp(262 * D, 318 * D, u) - 14 * D * (1 - v), y]; }, nu: 5, nv: 6, off: 0.3, c: 0.35, t: 1.2 }), DK);
-        add(gr, F('thMark', [[patch('t8THmarkH', { tab: TH, map: band(PC - 9 * D, PC + 9 * D, 25.6, 26.1), nu: 3, nv: 1, off: -0.3, c: 0.08, t: 0.3 })],
-          [patch('t8THmarkV', { tab: TH, map: band(PC - 1.3 * D, PC + 1.3 * D, 23.2, 28.6), nu: 1, nv: 2, off: -0.3, c: 0.08, t: 0.3 })]]), GR);
+        if (ENDO) {
+          // collets chromés (hanche / genou) autour du fémur ajouré
+          add(gr, full('t8THcoreE', TH, 0, 44, 12, 4, { off: -2.4 }), DK);
+          add(gr, F('enThCol', [[full('t8EnThColT', TH, 5.6, 10.2, 24, 2, { c: 0.5, t: 2.5 })], [full('t8EnThColB', TH, 34.6, 39.6, 24, 2, { c: 0.5, t: 2.5 })]]), WH);
+        } else {
+          add(gr, full('t8THcore', TH, 0, 44, 10, 4, { off: -0.8 }), DK);
+          add(gr, patch('t8THmain', { tab: TH, map: band(PC + PWd + 1.5 * D, PC - PWd - 1.5 * D + 2 * PI, 5.6, 39.6), nu: 20, nv: 9, c: 0.5, t: 1.4 }), WH);
+          add(gr, patch('t8THtop', { tab: TH, map: band(PC - PWd - 1.5 * D, PC + PWd + 1.5 * D, 5.6, y0 - 0.5), nu: 8, nv: 1, c: 0.45, t: 1.4 }), WH);
+          add(gr, patch('t8THbot', { tab: TH, map: band(PC - PWd - 1.5 * D, PC + PWd + 1.5 * D, y1 + 0.5, 39.6), nu: 8, nv: 2, c: 0.45, t: 1.4 }), WH);
+          add(gr, patch('t8THpanel', { tab: TH, map: shield(y0, y1, ovalW(y0, y1, PWd, 4), PC), nu: 10, nv: 12, off: -0.45, c: 0.3, t: 0.6 }), DK);
+          add(gr, patch('t8THinner', { tab: TH, map: (u, v) => { const y = lerp(17, 39.2, v); return [lerp(262 * D, 318 * D, u) - 14 * D * (1 - v), y]; }, nu: 5, nv: 6, off: 0.3, c: 0.35, t: 1.2 }), DK);
+          add(gr, F('thMark', [[patch('t8THmarkH', { tab: TH, map: band(PC - 9 * D, PC + 9 * D, 25.6, 26.1), nu: 3, nv: 1, off: -0.3, c: 0.08, t: 0.3 })],
+            [patch('t8THmarkV', { tab: TH, map: band(PC - 1.3 * D, PC + 1.3 * D, 23.2, 28.6), nu: 1, nv: 2, off: -0.3, c: 0.08, t: 0.3 })]]), GR);
+        }
         endoLimb(gr, 'th');
       }, L.th / 44);
       /* ---------- genou : grand disque gris extérieur ---------- */
@@ -885,17 +940,22 @@ roughnessFactor = clamp(roughnessFactor + uTriR * (0.8 - dot(triC, vec3(0.333)))
       /* ---------- tibia : plaque blanche avant, flancs gris, mollet foncé ---------- */
       P[sd + 'sh'] = sidePart(z, gr => {
         const SB = th => 36.6 - 3.0 * Math.pow(Math.abs(Math.cos(th)), 2);
-        add(gr, full('t8SHcore', SH, 0, 44, 10, 4, { off: -0.8 }), DK);
-        add(gr, patch('t8SHcalf', { tab: SH, map: band(-74 * D, 84 * D, 3.2, 37.5), nu: 12, nv: 6, c: 0.45, t: 1.2 }), DK);
-        add(gr, patch('t8SHplate', { tab: SH, map: band(94 * D, 264 * D, 2.4, SB), nu: 16, nv: 8, off: 0.2, c: 0.5, t: 1.4 }), WH);
-        const swoosh = (u, v) => { const y = lerp(3.2, 38.6, v), c = lerp(72 * D, 136 * D, Math.pow(v, 1.25)); return [c + (u - 0.5) * lerp(34 * D, 16 * D, v), y]; };
-        add(gr, patch('t8SHswoosh', { tab: SH, map: swoosh, nu: 4, nv: 10, off: 0.5, c: 0.35, t: 1.3 }), DK);
-        add(gr, patch('t8SHline', { tab: SH, map: (u, v) => { const y = lerp(12, 30, v), c = lerp(158 * D, 182 * D, v); return [c + (u - 0.5) * 2.4 * D, y]; }, nu: 1, nv: 4, off: 0.24, c: 0.06, t: 0.4 }), DK2);
-        add(gr, patch('t8SHsideI', { tab: SH, map: band(267 * D, 283 * D, 4.5, 35.4), nu: 3, nv: 8, off: 0.12, c: 0.35, t: 1.0 }), DK2);
-        add(gr, patch('t8SHslot', { tab: SH, map: band(196 * D, 226 * D, 6.6, 8.6), nu: 4, nv: 1, off: 0.32, c: 0.15, t: 0.6 }), BK);
-        // logo orange + marquage
-        add(gr, g.prism([[-0.9, 0.8], [0.9, 0.8], [0.9, -0.2], [0, -1.0], [-0.9, -0.2]], 0.5, 0.1), OR, null, null).applyMatrix4(mul(frame(SH, 150 * D, 21, 0.25), MT([0, 0, 0], [-PI / 2, 0, 0], 1)));
-        add(gr, fuse('t8ShinTxt', [0, 1, 2, 3].map(i => [g.box(0.9, 0.18, 0.55), null, frame(SH, 150 * D, 24.0 + i * 0.95, 0.24)])), DK2);
+        if (ENDO) {
+          add(gr, full('t8SHcoreE', SH, 0, 44, 12, 4, { off: -2.2 }), DK);
+          add(gr, full('t8EnShCol', SH, 2.4, 6.8, 24, 2, { off: 0.15, c: 0.5, t: 2.5 }), WH);
+        } else {
+          add(gr, full('t8SHcore', SH, 0, 44, 10, 4, { off: -0.8 }), DK);
+          add(gr, patch('t8SHcalf', { tab: SH, map: band(-74 * D, 84 * D, 3.2, 37.5), nu: 12, nv: 6, c: 0.45, t: 1.2 }), DK);
+          add(gr, patch('t8SHplate', { tab: SH, map: band(94 * D, 264 * D, 2.4, SB), nu: 16, nv: 8, off: 0.2, c: 0.5, t: 1.4 }), WH);
+          const swoosh = (u, v) => { const y = lerp(3.2, 38.6, v), c = lerp(72 * D, 136 * D, Math.pow(v, 1.25)); return [c + (u - 0.5) * lerp(34 * D, 16 * D, v), y]; };
+          add(gr, patch('t8SHswoosh', { tab: SH, map: swoosh, nu: 4, nv: 10, off: 0.5, c: 0.35, t: 1.3 }), DK);
+          add(gr, patch('t8SHline', { tab: SH, map: (u, v) => { const y = lerp(12, 30, v), c = lerp(158 * D, 182 * D, v); return [c + (u - 0.5) * 2.4 * D, y]; }, nu: 1, nv: 4, off: 0.24, c: 0.06, t: 0.4 }), DK2);
+          add(gr, patch('t8SHsideI', { tab: SH, map: band(267 * D, 283 * D, 4.5, 35.4), nu: 3, nv: 8, off: 0.12, c: 0.35, t: 1.0 }), DK2);
+          add(gr, patch('t8SHslot', { tab: SH, map: band(196 * D, 226 * D, 6.6, 8.6), nu: 4, nv: 1, off: 0.32, c: 0.15, t: 0.6 }), BK);
+          // logo orange + marquage
+          add(gr, g.prism([[-0.9, 0.8], [0.9, 0.8], [0.9, -0.2], [0, -1.0], [-0.9, -0.2]], 0.5, 0.1), OR, null, null).applyMatrix4(mul(frame(SH, 150 * D, 21, 0.25), MT([0, 0, 0], [-PI / 2, 0, 0], 1)));
+          add(gr, fuse('t8ShinTxt', [0, 1, 2, 3].map(i => [g.box(0.9, 0.18, 0.55), null, frame(SH, 150 * D, 24.0 + i * 0.95, 0.24)])), DK2);
+        }
         // cheville
         add(gr, full('t8Ankle', SH, 37.4, 44, 24, 2, { off: 0.25, c: 0.35, t: 1.0 }), DK);
         add(gr, fuse('t8AnkBolts', [60, 120, 240, 300].map(a => [g.cyl(0.4, 0.4, 0.5, 6), null, frame(SH, a * D, 40.4, 0.3)])), ST);

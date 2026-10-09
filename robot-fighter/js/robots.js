@@ -111,12 +111,21 @@ const ROSTER = [
     proj: { name: 'IGNITION ORB', style: 'orb', color: '#ff6a2b', core: '#fff0e0' },
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' },
-  { id: 'asimov', name: 'ASIMOV', full: 'Asimov v1', maker: 'MENLO RESEARCH', country: 'OPEN SOURCE', year: 2025,
-    body: '#2c3236', trim: '#c9a25a', joint: '#1a1d20', accent: '#ffc845', visor: '#060708', head: 'asimov',
+  { id: 'asimov', name: 'ASIMOV', full: 'Asimov v1', maker: 'MENLO RESEARCH', country: 'OPEN SOURCE', year: 2026,
+    body: '#454d53', trim: '#c9a25a', joint: '#262b2f', accent: '#ffc845', visor: '#0c0e10', head: 'asimov',
     scale: 0.96, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
     proj: { name: 'GIT PUSH', style: 'wave', color: '#ffbf3a', core: '#fff4d6' },
     move: 'flip', moveName: 'PULL REQUEST', sup: 'rush', supName: 'MERGE CONFLICT', throwType: 'suplex', throwName: 'SUDO SUPLEX',
-    bio: 'L\'humanoïde open source de Menlo Research, livré en kit DIY. 1,2 m en vrai… 1,85 m en version combat.' }
+    bio: 'L\'humanoïde open source de Menlo Research, à monter soi-même (kit DIY). 1,2 m en vrai… 1,85 m en version combat.',
+    skins: [ // finitions / matières / lumières : voir SKINS dans js/models/asimov.js
+      { id: 'classic', name: 'ORIGINAL', sw: ['#454d53', '#c9a25a', '#1c1f22', '#ffc845'] },
+      { id: 'proto', name: 'PROTOTYPE DIY', sw: ['#e4e2dc', '#b9bfc6', '#8d9196', '#36d2ff'],
+        ch: { body: '#e4e2dc', trim: '#b9bfc6', joint: '#8d9196', accent: '#36d2ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#36d2ff', core: '#e6fbff' } } },
+      { id: 'hacker', name: 'HACKER', sw: ['#1b1c1f', '#2fd46a', '#0e0f10', '#3dff7a'],
+        ch: { body: '#1b1c1f', trim: '#2fd46a', joint: '#0e0f10', accent: '#3dff7a', proj: { name: 'GIT PUSH', style: 'wave', color: '#3dff7a', core: '#e8ffee' } } },
+      { id: 'cobalt', name: 'ANODISÉ COBALT', sw: ['#a3aab1', '#2f6cff', '#3a4046', '#5fb0ff'],
+        ch: { body: '#a3aab1', trim: '#2f6cff', joint: '#3a4046', accent: '#5fb0ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#4f9dff', core: '#e6f1ff' } } }
+    ] }
 ];
 
 /* ---------- poses (angles en degrés) ----------
@@ -144,7 +153,7 @@ const POSES = {
   clk: mkPose({ lean: 22, hd: -12, fs: 55, fe: 110, bs: 35, be: 115, fh: 92, fk: 10, bh: 35, bk: 135 }),
   chk: mkPose({ lean: 38, hd: -10, fs: 30, fe: 60, bs: 10, be: 60, fh: 96, fk: 0, bh: 65, bk: 140 }),
   jp: mkPose({ lean: 18, hd: -6, fs: 55, fe: 0, bs: 50, be: 100, fh: 80, fk: 110, bh: 40, bk: 110 }),
-  jk: mkPose({ lean: 0, hd: 0, fs: 80, fe: 80, bs: 40, be: 100, fh: 62, fk: 0, bh: 60, bk: 130 }),
+  jk: mkPose({ lean: -10, hd: 0, fs: 20, fe: 20, bs: 60, be: 120, fh: 63.1, fk: 1.6, bh: 60, bk: 130, spin: 1.72, kyf: -1.57, hxf: 0.5, twist: -0.4, axf: 0.9 }), // chassé sauté, de côté
   jhk: mkPose({ lean: -12, hd: 4, fs: 90, fe: 70, bs: 30, be: 100, fh: 95, fk: 4, bh: 30, bk: 120 }),
   hit: mkPose({ lean: -24, hd: -18, fs: 20, fe: 70, bs: 8, be: 60, fh: 12, fk: 24, bh: -32, bk: 10, grip: 0.4 }),
   chit: mkPose({ lean: 0, hd: -25, fs: 30, fe: 80, bs: 20, be: 80, fh: 70, fk: 125, bh: 20, bk: 125 }),
@@ -162,19 +171,38 @@ const POSES = {
   win: mkPose({ lean: -4, hd: 10, fs: 168, fe: 15, bs: 30, be: 140, fh: 12, fk: 10, bh: -12, bk: 6 }),
   win2: mkPose({ lean: 0, hd: 6, fs: 95, fe: 130, bs: 95, be: 130, fh: 15, fk: 10, bh: -15, bk: 8, grip: 0.3 }),
   taunt: mkPose({ lean: -6, hd: 15, fs: 175, fe: 5, bs: 165, be: 10, fh: 10, fk: 10, bh: -10, bk: 8, grip: 0 }),
-  // ---- coups de pied façon boxe française / MMA (armé → extension → réarmé) ----
-  kChamber: mkPose({ lean: 2, hd: -6, fs: 55, fe: 100, bs: 35, be: 115, fh: 100, fk: 122, bh: -8, bk: 12, spin: 0.35 }),
-  fouette: mkPose({ lean: -16, hd: -2, fs: 65, fe: 95, bs: 20, be: 120, fh: 96, fk: 4, bh: -6, bk: 8, spin: 0.55 }),
-  rkChamber: mkPose({ lean: 0, hd: -4, fs: 60, fe: 95, bs: 10, be: 100, fh: 10, fk: 18, bh: 105, bk: 125, spin: 0.7 }),
-  rkHigh: mkPose({ lean: -34, hd: 4, fs: 80, fe: 110, bs: -35, be: 15, fh: 6, fk: 10, bh: 128, bk: 4, spin: 1.0 }),
-  teepChamber: mkPose({ lean: -2, hd: -4, fs: 55, fe: 100, bs: 30, be: 115, fh: 108, fk: 125, bh: -10, bk: 15 }),
-  teep: mkPose({ lean: -22, hd: 0, fs: 60, fe: 105, bs: 35, be: 110, fh: 88, fk: 2, bh: -14, bk: 10 }),
+  // ---- coups de pied façon boxe française / MMA (armé → extension → réarmé), donnés DE CÔTÉ ----
+  // spin : rotation des hanches (+ = dos vers la caméra, coups de la jambe avant ; - = poitrine vers la caméra, jambe arrière)
+  // kyf / kyb (jambe de frappe) : pivot de la jambe autour de sa hanche ; spin + ky = direction réelle de la jambe
+  //   (0 = dans l'axe du combat). Le squelette 2D des zones de frappe est projeté par sx = cos(spin + ky) (keyPose, fight.js) :
+  //   hanches tournées mais jambe dans l'axe → portée intacte.
+  // hxf / hxb ≈ 1.5 (jambe de frappe) : plan du genou couché à l'horizontale → armé « sur le côté », tibia qui fouette à plat
+  // ky de la jambe d'appui : pivot du pied d'appui (talon tourné vers l'adversaire) ; twist : buste moins tourné que les hanches
+  // fouetté (jambe avant) — armé : genou levé sur le côté, tibia replié à plat vers l'extérieur, hanches qui pivotent
+  kChamber: mkPose({ lean: -4, hd: -6, fs: 70, fe: 115, bs: 30, be: 115, fh: 95, fk: 120, bh: -8, bk: 12, spin: 1.0, kyf: -1.28, hxf: 1.5, kyb: 0.4, twist: -0.3 }),
+  // fouetté — impact : hanches retournées (dos à la caméra), tibia qui claque à plat dans l'axe, buste qui s'efface en arrière
+  fouette: mkPose({ lean: -20, hd: -4, fs: 85, fe: 125, bs: 5, be: 70, fh: 111.1, fk: 33.8, bh: -6, bk: 8, spin: 1.9, kyf: -1.5, hxf: 1.5, kyb: 0.5, twist: -1.0 }),
+  // high kick jambe arrière (MMA) — armé : la poitrine s'ouvre vers la caméra, genou qui arrive par le côté, pivot du pied avant
+  rkChamber: mkPose({ lean: -6, hd: -4, fs: 85, fe: 125, bs: 15, be: 90, fh: 8, fk: 16, bh: 95, bk: 120, spin: -0.9, kyb: 1.3, hxb: 1.5, kyf: -0.3, twist: 0.3 }),
+  // high kick — impact : hanches complètement retournées, talon d'appui vers l'adversaire, bras arrière lancé en balancier
+  rkHigh: mkPose({ lean: -30, hd: 6, fs: 95, fe: 130, bs: -35, be: 15, fh: 6, fk: 10, bh: 138.9, bk: 24.1, spin: -0.62, kyb: 1.57, hxb: 0.5, kyf: -1.0, twist: 0.2, axb: 0.3 }),
+  // chassé latéral (savate / yoko-geri) — armé : genou monté en travers devant le buste, pied replié près du genou d'appui
+  teepChamber: mkPose({ lean: -6, hd: -4, fs: 70, fe: 115, bs: 40, be: 120, fh: 108, fk: 130, bh: -10, bk: 15, spin: 1.3, kyf: -0.7, hxf: 0.3, kyb: 0.4, twist: -0.3 }),
+  // chassé latéral — extension : hanches à 90°, talon / tranchant du pied poussé dans l'axe, buste incliné à l'opposé
+  teep: mkPose({ lean: -30, hd: 4, fs: 10, fe: 20, bs: 60, be: 125, fh: 87.9, fk: 1.6, bh: -14, bk: 10, spin: 1.77, kyf: -1.57, hxf: 1.4, kyb: 0.6, twist: -0.4, axf: 1.1 }),
+  // retourné : la tête et les épaules tournent d'abord, genou arrière replié (le spin est donné par les images-clés)
   backTurn: mkPose({ lean: 10, hd: 0, fs: 40, fe: 100, bs: 40, be: 100, fh: 10, fk: 20, bh: 30, bk: 110 }),
-  backKick: mkPose({ lean: 35, hd: -10, fs: 30, fe: 110, bs: 30, be: 110, fh: 15, fk: 15, bh: -95, bk: 0 }),
+  // retourné — impact : hanches au-delà du demi-tour (spin + 0.5), jambe ramenée dans l'axe (kyb -0.5), talon en avant,
+  // regard par-dessus l'épaule
+  backKick: mkPose({ lean: 35, hd: -10, fs: 30, fe: 110, bs: 30, be: 110, fh: 15, fk: 15, bh: -95, bk: 0, spin: 0.5, kyb: -0.5, headSpin: 1.3 }),
   knee: mkPose({ lean: 10, hd: -10, fs: 70, fe: 110, bs: 60, be: 100, fh: 125, fk: 150, bh: -20, bk: 30 }),
-  clkMMA: mkPose({ lean: 18, hd: -10, fs: 55, fe: 105, bs: 35, be: 110, fh: 70, fk: 8, bh: 25, bk: 120 }),
+  // low kick (MMA) dans le mollet : hanches tournées, tibia qui part de côté, légèrement plongeant
+  clkMMA: mkPose({ lean: 12, hd: -10, fs: 75, fe: 120, bs: 30, be: 100, fh: 81.6, fk: 33.4, bh: 25, bk: 120, spin: 1.6, kyf: -1.2, hxf: 0.2, kyb: 0.3, twist: -0.8 }),
   chkSpin: mkPose({ lean: 40, hd: -10, fs: 30, fe: 60, bs: 10, be: 60, fh: 75, fk: 130, bh: -92, bk: 0 }),
-  jhkT: mkPose({ lean: -15, hd: 0, fs: 80, fe: 80, bs: 30, be: 100, fh: 100, fk: 4, bh: 40, bk: 120 }),
+  // coup de pied tornade : fin de la vrille en fouetté (hanches retournées, jambe avant tendue dans l'axe)
+  jhkT: mkPose({ lean: -18, hd: 0, fs: 85, fe: 120, bs: 10, be: 80, fh: 98.6, fk: 1.6, bh: 40, bk: 120, spin: 1.75, kyf: -1.55, hxf: 1.5, twist: -0.9 }),
+  // chassé sauté : genou d'abord replié en travers, puis jambe avant poussée en diagonale, jambe arrière groupée
+  jkChamber: mkPose({ lean: 0, hd: -4, fs: 70, fe: 110, bs: 50, be: 110, fh: 110, fk: 140, bh: 60, bk: 130, spin: 1.2, kyf: -0.7, hxf: 0.3, twist: -0.3 }),
   // ---- prises / projections ----
   grab: mkPose({ lean: 15, hd: -5, fs: 85, fe: 35, bs: 80, be: 40, fh: 30, fk: 30, bh: -25, bk: 15, grip: 0.6 }),
   liftOver: mkPose({ lean: -12, hd: -20, fs: 170, fe: 20, bs: 165, be: 25, fh: 15, fk: 25, bh: -15, bk: 20 }),
