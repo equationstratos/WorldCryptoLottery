@@ -72,7 +72,7 @@
   };
   const plant = st({ lean: 11, hd: -9, fs: 20, fe: 80, bs: 20, be: 80, grip: 1 }, 4, -4, 80);
   const load = st({ lean: 26, hd: -12, fs: -38, fe: 30, bs: -38, be: 30, grip: 0.8 }, 4, -4, 63);
-  const push = st({ lean: 2, hd: -14, fs: 150, fe: 18, bs: 145, be: 18, grip: 0.7 }, 4, -4, 85.6);
+  const push = st({ lean: 2, hd: -14, fs: 128, fe: 26, bs: 122, be: 28, grip: 0.7 }, 4, -4, 85.6); // bras lancés vers l'avant-haut (pas au-dessus du titre)
   const tuckT = mkPose({ lean: 12, hd: -6, fs: 45, fe: 118, bs: 40, be: 120, axf: -0.15, axb: -0.15, fh: 92, fk: 112, bh: 72, bk: 120, grip: 1 });
   const gLand = st({ ...POSES.idle, lean: 12, fs: 55, fe: 95, bs: 35, be: 105 }, F0, B0, H0, HB0); // jambes tendues vers le sol
   const crouchG = st({ ...POSES.idle, lean: 22, hd: -12, fs: 62, fe: 100, bs: 38, be: 110 }, F0, B0, H0 - 15, HB0 - 15);
@@ -81,7 +81,7 @@
   const pc0 = cH(push) + 5, pc1 = cH(gLand);
   const turnJump = bake(26, u => {
     const p = u < 0.42 ? lerpP(push, tuckT, sm(u / 0.42)) : lerpP(tuckT, gLand, sm((u - 0.42) / 0.58));
-    const dy = lerp(pc0, pc1, u) + 46 * 4 * u * (1 - u) - cH(p);
+    const dy = lerp(pc0, pc1, u) + 42 * 4 * u * (1 - u) - cH(p);
     return [p, 1, { yaw: lerp(YI, -0.42, u), dx: dxK * (1 - u), dy: Math.max(0, dy), spin: u < 1 ? -0.5 - (TAU - 0.5) * sm(u) : 0 }];
   });
 
@@ -94,8 +94,10 @@
   const ball = mkPose({ lean: 22, hd: 14, fs: 68, fe: 62, bs: 66, be: 64, fh: 118, fk: 138, bh: 114, bk: 138, grip: 1 }); // groupé, mains aux genoux
   const open = st({ lean: 16, hd: -8, fs: 85, fe: 18, bs: 80, be: 18, grip: 0.3 }, 0, 0, 84);
   const landF = st({ lean: 26, hd: -10, fs: 88, fe: 14, bs: 82, be: 14, grip: 0.3 }, 0, 0, 66);
-  const stick = st({ lean: -4, hd: -12, fs: 165, fe: 6, axf: 0.42, bs: 165, be: 6, axb: 0.42, grip: 0 }, 0, 0, 85.6); // réception plantée, bras en V
-  const stick2 = { ...stick, lean: -5, hd: -14, axf: 0.5, axb: 0.5 };
+  // réception plantée, bras en V (abduction depuis le bras pendant : les bras passent par les côtés)
+  // le buste s'ouvre vers le public (twist) pour que le V se lise de face
+  const stick = st({ lean: -4, hd: -12, twist: -0.6, headSpin: -0.25, fs: 14, fe: 8, axf: 2.42, bs: 14, be: 8, axb: 2.42, grip: 0 }, 0, 0, 85.6);
+  const stick2 = { ...stick, lean: -5, hd: -14, twist: -0.66, axf: 2.52, axb: 2.52 };
   const dxL = dxIn - 12; // le salto recule un peu
   const fc0 = cH(take) + 6, fc1 = cH(open);
   const flip = bake(30, u => {

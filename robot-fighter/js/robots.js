@@ -30,7 +30,7 @@ const ROSTER = [
     body: '#bfc4cb', trim: '#5e636b', joint: '#1c1d21', accent: '#ffb43a', visor: '#08090b', head: 'atlas', metal: true,
     scale: 1.03, leg: 1.0, bulk: 1.15, chest: 1.12, speed: 0.95, power: 1.12, stage: 3,
     proj: { name: 'HYDRAULIC RING', style: 'ring', color: '#ffb43a', core: '#fff3d6' },
-    move: 'flip', moveName: 'PARKOUR FLIP', sup: 'moulinet', supName: 'MOULINET 720', throwType: 'helix', throwName: 'TORSION 360',
+    move: 'flip', moveName: 'PARKOUR FLIP', sup: 'moulinet', supName: 'MOULINET 720', throwType: 'helix', throwName: 'TORSION 360', backElbow: true,
     bio: 'Le nouvel Atlas 100 % électrique. Ses moteurs tournent à 360° : contorsions et prises impossibles pour un humain.',
     skins: [ // finitions / motifs / lumières : voir SKINS dans js/models/atlas.js
       { id: 'classic', name: 'ORIGINAL', sw: ['#d2d6dc', '#4f535a', '#141518', '#ffb43a'] },
@@ -81,29 +81,31 @@ const ROSTER = [
     bio: 'Jambes d\'autruche, genoux inversés. Le roi de l\'entrepôt.',
     skins: [ // finitions / motifs / lumières : voir SKINS dans js/models/digit.js
       { id: 'classic', name: 'ORIGINAL', sw: ['#1fa39c', '#131417', '#a6aab0', '#3dff74'] },
-      { id: 'cassie', name: 'CASSIE', sw: ['#1b2a4a', '#c9ced6', '#101114', '#5aa8ff'],
-        ch: { body: '#1b2a4a', trim: '#101114', joint: '#c9ced6', accent: '#5aa8ff', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#4a9dff', core: '#e0eeff' } } },
+      { id: 'cassie', name: 'CASSIE', sw: ['#2a5cd6', '#c9ced6', '#101114', '#5aa8ff'],
+        ch: { body: '#2a5cd6', trim: '#101114', joint: '#c9ced6', accent: '#5aa8ff', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#4a9dff', core: '#e0eeff' } } },
       { id: 'proto', name: 'PROTOTYPE', sw: ['#d9dbdc', '#8b9096', '#1a1b1e', '#ffb020'],
         ch: { body: '#d9dbdc', trim: '#1a1b1e', joint: '#8b9096', accent: '#ffb020', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ffb020', core: '#fff3d0' } } },
       { id: 'secu', name: 'SÉCURITÉ', sw: ['#d7ff1f', '#ff6a00', '#c8ccd2', '#111214'],
         ch: { body: '#d7ff1f', trim: '#111214', joint: '#c8ccd2', accent: '#ff7a00', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ff7a00', core: '#fff0c8' } } },
       { id: 'nocturne', name: 'NOCTURNE', sw: ['#141518', '#0a0a0c', '#2fe6ff', '#3a3d44'],
         ch: { body: '#141518', trim: '#0a0a0c', joint: '#3a3d44', accent: '#2fe6ff', visor: '#020608', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#2fe6ff', core: '#e0fdff' } } },
-      { id: 'autruche', name: 'AUTRUCHE', sw: ['#c9a46c', '#6e4a2c', '#e7c9b4', '#f4efe4'],
-        ch: { body: '#c9a46c', trim: '#3b2a1c', joint: '#e7c9b4', accent: '#ffb347', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ffa53a', core: '#fff1d8' } } },
-      { id: 'urbain', name: 'URBAIN', sw: ['#7d8085', '#3b3d42', '#c4c6c9', '#ff3b30'],
-        ch: { body: '#7d8085', trim: '#25272b', joint: '#3b3d42', accent: '#ff3b30', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ff3b30', core: '#ffe2df' } } }
+      { id: 'autruche', name: 'AUTRUCHE', sw: ['#a8805a', '#3b2a1c', '#f0a49a', '#f4efe4'],
+        ch: { body: '#a8805a', trim: '#3b2a1c', joint: '#f0a49a', accent: '#ffb347', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ffa53a', core: '#fff1d8' } } },
+      { id: 'urbain', name: 'URBAIN', sw: ['#686b70', '#1b1d20', '#a4a7ab', '#ff3b30'],
+        ch: { body: '#686b70', trim: '#25272b', joint: '#3b3d42', accent: '#ff3b30', proj: { name: 'CARGO LAUNCH', style: 'box', color: '#ff3b30', core: '#ffe2df' } } }
     ] },
   { id: 't800', name: 'T800', full: 'EngineAI T800 (REK)', maker: 'ENGINEAI · REK', country: 'CHINE', year: 2025,
     body: '#e9ebee', trim: '#5d6168', joint: '#3c3f45', accent: '#4aa8ff', visor: '#101216', head: 'figure', kicker: true,
     scale: 1.06, leg: 1.04, bulk: 1.06, chest: 1.06, speed: 1.0, power: 1.18, stage: 6,
     proj: { name: 'CORE BLAST', style: 'orb', color: '#4aa8ff', core: '#e6f3ff' },
-    move: 'spin', moveName: 'CYCLONE KICK', sup: 'storm', supName: 'DÉCAPITATEUR', throwType: 'takedown', throwName: 'OCTAGON SLAM',
+    move: 'cyclone', moveName: 'CYCLONE KICK', sup: 'storm', supName: 'DÉCAPITATEUR', throwType: 'takedown', throwName: 'OCTAGON SLAM',
     bio: 'Le poids lourd d\'EngineAI : 1,85 m, 85 kg, 41 articulations, 450 N·m. Star des combats REK, ses coups de pied ont décapité un androïde.',
     skins: [ // finitions / motifs / lumières (+ crâne d'endosquelette) : voir SKINS dans js/models/t800.js
       { id: 'classic', name: 'ORIGINAL', sw: ['#e9ebee', '#222a38', '#8e939b', '#4aa8ff'] },
       { id: 'endo', name: 'ENDOSQUELETTE', sw: ['#cfd3da', '#3a3c42', '#16171a', '#ff2414'],
-        ch: { body: '#cfd3da', trim: '#2a2c31', joint: '#1e1f23', accent: '#ff2a1a', visor: '#1a0000', proj: { name: 'CORE BLAST', style: 'orb', color: '#ff2414', core: '#ffd6cc' } } }
+        ch: { body: '#cfd3da', trim: '#2a2c31', joint: '#1e1f23', accent: '#ff2a1a', visor: '#1a0000', proj: { name: 'CORE BLAST', style: 'orb', color: '#ff2414', core: '#ffd6cc' } } },
+      { id: 'rek', name: 'REK ARÈNE', sw: ['#2a2c32', '#ff5f12', '#34363c', '#ff8a2a'],
+        ch: { body: '#2a2c32', trim: '#ff5f12', joint: '#34363c', accent: '#ff7a1a', proj: { name: 'CORE BLAST', style: 'orb', color: '#ff7a1a', core: '#fff0dc' } } }
     ] },
   { id: 'apollo', name: 'APOLLO', full: 'Apollo', maker: 'APPTRONIK', country: 'USA', year: 2023,
     body: '#e9e6df', trim: '#2c2f36', joint: '#3e424a', accent: '#ff6a2b', visor: '#121419', head: 'apollo',
@@ -112,13 +114,13 @@ const ROSTER = [
     move: 'uppercut', moveName: 'LIFT-OFF', sup: 'storm', supName: 'SATURN V STRIKE', throwType: 'suplex', throwName: 'SUPLEX ALLEMAND',
     bio: 'Né des recherches de la NASA. Force brute et fiabilité.' },
   { id: 'asimov', name: 'ASIMOV', full: 'Asimov v1', maker: 'MENLO RESEARCH', country: 'OPEN SOURCE', year: 2026,
-    body: '#454d53', trim: '#c9a25a', joint: '#262b2f', accent: '#ffc845', visor: '#0c0e10', head: 'asimov',
-    scale: 0.96, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
+    body: '#3a4248', trim: '#c9a25a', joint: '#202428', accent: '#ffc845', visor: '#0c0e10', head: 'asimov',
+    scale: 1.02, leg: 1.08, bulk: 0.96, chest: 1.0, speed: 1.06, power: 0.98, stage: 0,
     proj: { name: 'GIT PUSH', style: 'wave', color: '#ffbf3a', core: '#fff4d6' },
     move: 'flip', moveName: 'PULL REQUEST', sup: 'rush', supName: 'MERGE CONFLICT', throwType: 'suplex', throwName: 'SUDO SUPLEX',
     bio: 'L\'humanoïde open source de Menlo Research, à monter soi-même (kit DIY). 1,2 m en vrai… 1,85 m en version combat.',
     skins: [ // finitions / matières / lumières : voir SKINS dans js/models/asimov.js
-      { id: 'classic', name: 'ORIGINAL', sw: ['#454d53', '#c9a25a', '#1c1f22', '#ffc845'] },
+      { id: 'classic', name: 'ORIGINAL', sw: ['#3a4248', '#c9a25a', '#1c1f22', '#ffc845'] },
       { id: 'proto', name: 'PROTOTYPE DIY', sw: ['#e4e2dc', '#b9bfc6', '#8d9196', '#36d2ff'],
         ch: { body: '#e4e2dc', trim: '#b9bfc6', joint: '#8d9196', accent: '#36d2ff', proj: { name: 'GIT PUSH', style: 'wave', color: '#36d2ff', core: '#e6fbff' } } },
       { id: 'hacker', name: 'HACKER', sw: ['#1b1c1f', '#2fd46a', '#0e0f10', '#3dff7a'],
@@ -153,7 +155,7 @@ const POSES = {
   clk: mkPose({ lean: 22, hd: -12, fs: 55, fe: 110, bs: 35, be: 115, fh: 92, fk: 10, bh: 35, bk: 135 }),
   chk: mkPose({ lean: 38, hd: -10, fs: 30, fe: 60, bs: 10, be: 60, fh: 96, fk: 0, bh: 65, bk: 140 }),
   jp: mkPose({ lean: 18, hd: -6, fs: 55, fe: 0, bs: 50, be: 100, fh: 80, fk: 110, bh: 40, bk: 110 }),
-  jk: mkPose({ lean: -10, hd: 0, fs: 20, fe: 20, bs: 60, be: 120, fh: 63.1, fk: 1.6, bh: 60, bk: 130, spin: 1.72, kyf: -1.57, hxf: 0.5, twist: -0.4, axf: 0.9 }), // chassé sauté, de côté
+  jk: mkPose({ lean: -16, hd: 0, fs: 20, fe: 20, bs: 60, be: 120, fh: 63.1, fk: 1.6, bh: 60, bk: 130, spin: 1.72, kyf: -1.57, hxf: 0.5, twist: -0.4, axf: 0.9, kyb: -1.5, hxb: 0.3 }), // chassé sauté, de côté
   jhk: mkPose({ lean: -12, hd: 4, fs: 90, fe: 70, bs: 30, be: 100, fh: 95, fk: 4, bh: 30, bk: 120 }),
   hit: mkPose({ lean: -24, hd: -18, fs: 20, fe: 70, bs: 8, be: 60, fh: 12, fk: 24, bh: -32, bk: 10, grip: 0.4 }),
   chit: mkPose({ lean: 0, hd: -25, fs: 30, fe: 80, bs: 20, be: 80, fh: 70, fk: 125, bh: 20, bk: 125 }),
@@ -181,28 +183,48 @@ const POSES = {
   // fouetté (jambe avant) — armé : genou levé sur le côté, tibia replié à plat vers l'extérieur, hanches qui pivotent
   kChamber: mkPose({ lean: -4, hd: -6, fs: 70, fe: 115, bs: 30, be: 115, fh: 95, fk: 120, bh: -8, bk: 12, spin: 1.0, kyf: -1.28, hxf: 1.5, kyb: 0.4, twist: -0.3 }),
   // fouetté — impact : hanches retournées (dos à la caméra), tibia qui claque à plat dans l'axe, buste qui s'efface en arrière
-  fouette: mkPose({ lean: -20, hd: -4, fs: 85, fe: 125, bs: 5, be: 70, fh: 111.1, fk: 33.8, bh: -6, bk: 8, spin: 1.9, kyf: -1.5, hxf: 1.5, kyb: 0.5, twist: -1.0 }),
+  fouette: mkPose({ lean: -28, hd: -4, fs: 95, fe: 130, bs: -12, be: 50, fh: 111.1, fk: 33.8, bh: -6, bk: 8, spin: 1.9, kyf: -1.5, hxf: 1.5, kyb: 0.5, twist: -1.4 }),
   // high kick jambe arrière (MMA) — armé : la poitrine s'ouvre vers la caméra, genou qui arrive par le côté, pivot du pied avant
   rkChamber: mkPose({ lean: -6, hd: -4, fs: 85, fe: 125, bs: 15, be: 90, fh: 8, fk: 16, bh: 95, bk: 120, spin: -0.9, kyb: 1.3, hxb: 1.5, kyf: -0.3, twist: 0.3 }),
   // high kick — impact : hanches complètement retournées, talon d'appui vers l'adversaire, bras arrière lancé en balancier
-  rkHigh: mkPose({ lean: -30, hd: 6, fs: 95, fe: 130, bs: -35, be: 15, fh: 6, fk: 10, bh: 138.9, bk: 24.1, spin: -0.62, kyb: 1.57, hxb: 0.5, kyf: -1.0, twist: 0.2, axb: 0.3 }),
+  rkHigh: mkPose({ lean: -38, hd: 6, fs: 95, fe: 130, bs: -50, be: 10, fh: 6, fk: 10, bh: 138.9, bk: 24.1, spin: -0.95, kyb: 1.9, hxb: 0.5, kyf: -1.0, twist: 1.0, axb: 0.3 }),
   // chassé latéral (savate / yoko-geri) — armé : genou monté en travers devant le buste, pied replié près du genou d'appui
-  teepChamber: mkPose({ lean: -6, hd: -4, fs: 70, fe: 115, bs: 40, be: 120, fh: 108, fk: 130, bh: -10, bk: 15, spin: 1.3, kyf: -0.7, hxf: 0.3, kyb: 0.4, twist: -0.3 }),
+  teepChamber: mkPose({ lean: -12, hd: -4, fs: 70, fe: 115, bs: 40, be: 120, fh: 120, fk: 145, bh: -10, bk: 15, spin: 1.5, kyf: -0.5, hxf: 0.8, kyb: 0.4, twist: -0.3 }),
   // chassé latéral — extension : hanches à 90°, talon / tranchant du pied poussé dans l'axe, buste incliné à l'opposé
   teep: mkPose({ lean: -30, hd: 4, fs: 10, fe: 20, bs: 60, be: 125, fh: 87.9, fk: 1.6, bh: -14, bk: 10, spin: 1.77, kyf: -1.57, hxf: 1.4, kyb: 0.6, twist: -0.4, axf: 1.1 }),
-  // retourné : la tête et les épaules tournent d'abord, genou arrière replié (le spin est donné par les images-clés)
-  backTurn: mkPose({ lean: 10, hd: 0, fs: 40, fe: 100, bs: 40, be: 100, fh: 10, fk: 20, bh: 30, bk: 110 }),
+  // retourné : la tête et les épaules tournent d'abord (regard par-dessus l'épaule), genou arrière replié
+  // (le spin est donné par les images-clés ; à l'armé, fhk remonte le genou vers la poitrine : option bh / bk)
+  backTurn: mkPose({ lean: 10, hd: 0, fs: 40, fe: 100, bs: 40, be: 100, fh: 10, fk: 20, bh: 30, bk: 110, headSpin: 1.0 }),
   // retourné — impact : hanches au-delà du demi-tour (spin + 0.5), jambe ramenée dans l'axe (kyb -0.5), talon en avant,
   // regard par-dessus l'épaule
   backKick: mkPose({ lean: 35, hd: -10, fs: 30, fe: 110, bs: 30, be: 110, fh: 15, fk: 15, bh: -95, bk: 0, spin: 0.5, kyb: -0.5, headSpin: 1.3 }),
   knee: mkPose({ lean: 10, hd: -10, fs: 70, fe: 110, bs: 60, be: 100, fh: 125, fk: 150, bh: -20, bk: 30 }),
   // low kick (MMA) dans le mollet : hanches tournées, tibia qui part de côté, légèrement plongeant
-  clkMMA: mkPose({ lean: 12, hd: -10, fs: 75, fe: 120, bs: 30, be: 100, fh: 81.6, fk: 33.4, bh: 25, bk: 120, spin: 1.6, kyf: -1.2, hxf: 0.2, kyb: 0.3, twist: -0.8 }),
+  clkMMA: mkPose({ lean: 12, hd: -10, fs: 75, fe: 120, bs: 30, be: 100, fh: 81.6, fk: 33.4, bh: 25, bk: 120, spin: 1.6, kyf: -1.2, hxf: 0.2, kyb: -0.9, twist: -0.8 }),
+  // low kick — armé : hanches qui pivotent, genou avant ouvert sur le côté, tibia replié à plat (il va fouetter le mollet)
+  clkArm: mkPose({ lean: 16, hd: -12, fs: 75, fe: 120, bs: 35, be: 115, fh: 80, fk: 120, bh: 25, bk: 120, spin: 1.3, kyf: -0.8, hxf: 1.4, kyb: -0.8, twist: -0.7 }),
   chkSpin: mkPose({ lean: 40, hd: -10, fs: 30, fe: 60, bs: 10, be: 60, fh: 75, fk: 130, bh: -92, bk: 0 }),
   // coup de pied tornade : fin de la vrille en fouetté (hanches retournées, jambe avant tendue dans l'axe)
-  jhkT: mkPose({ lean: -18, hd: 0, fs: 85, fe: 120, bs: 10, be: 80, fh: 98.6, fk: 1.6, bh: 40, bk: 120, spin: 1.75, kyf: -1.55, hxf: 1.5, twist: -0.9 }),
+  jhkT: mkPose({ lean: -26, hd: 0, fs: 95, fe: 130, bs: -15, be: 45, fh: 98.6, fk: 1.6, bh: 40, bk: 120, spin: 1.75, kyf: -1.55, hxf: 1.5, twist: -1.35, kyb: -1.4 }),
   // chassé sauté : genou d'abord replié en travers, puis jambe avant poussée en diagonale, jambe arrière groupée
-  jkChamber: mkPose({ lean: 0, hd: -4, fs: 70, fe: 110, bs: 50, be: 110, fh: 110, fk: 140, bh: 60, bk: 130, spin: 1.2, kyf: -0.7, hxf: 0.3, twist: -0.3 }),
+  jkChamber: mkPose({ lean: 0, hd: -4, fs: 70, fe: 110, bs: 50, be: 110, fh: 110, fk: 140, bh: 60, bk: 130, spin: 1.2, kyf: -0.7, hxf: 0.3, twist: -0.3, kyb: -1.2 }),
+  // ---- CYCLONE KICK (T800) : xuanfeng jiao (旋风脚, « coup de pied tourbillon » du wushu) ----
+  // jambe avant (f, côté caméra) = jambe d'appel ET de frappe ; jambe arrière (b) = balancier qui lance la rotation ;
+  // main arrière (b) = claque la plante du pied au sommet. spin + = rotation vers la gauche (dos puis poitrine vers la caméra).
+  // armé : pas en avant pied rentré, bras balancés vers l'arrière, buste vrillé (ressort), regard sur la cible
+  cyWind: mkPose({ lean: 18, hd: -8, fs: -25, fe: 75, bs: 35, be: 100, fh: 36, fk: 56, bh: -26, bk: 40, spin: -0.35, twist: -0.85, kyf: 0.45, headSpin: 1.0, grip: 0.6 }),
+  // appel : la jambe arrière monte en croissant extérieur (1er coup), les bras partent vers le haut, la jambe avant pousse
+  cyLift: mkPose({ lean: -6, hd: -8, fs: 150, fe: 40, bs: 125, be: 35, fh: -16, fk: 12, bh: 98, bk: 22, spin: 0.75, kyb: -0.75, hxb: 0.15, kyf: 0.3, twist: 0.35, axf: 0.3, axb: 0.5, headSpin: -0.9, grip: 0.4 }),
+  cyCres1: mkPose({ lean: 0, hd: -6, fs: 115, fe: 80, bs: 100, be: 90, fh: 30, fk: 70, bh: 102, bk: 14, spin: 1.45, kyb: -0.95, hxb: 0.2, twist: 0.45, headSpin: -1.3, grip: 0.5 }),
+  // en l'air, dos à la cible : jambe arrière repliée, jambe de frappe qui monte par l'extérieur, bras serrés (vitesse de rotation)
+  cyAir: mkPose({ lean: 6, hd: -6, fs: 70, fe: 120, bs: 115, be: 75, fh: 82, fk: 34, bh: 70, bk: 115, spin: 3.4, kyf: -1.25, hxf: 0.5, twist: 0.25, headSpin: 1.25, grip: 0.7 }),
+  // impact : face à la caméra, jambe tendue à hauteur de tête balayée en croissant intérieur vers la cible,
+  // la main arrière vient claquer la plante du pied, bras avant ouvert en balancier, jambe d'appel repliée
+  cyKick: mkPose({ lean: 6, hd: -10, fs: 55, fe: 35, bs: 100, be: 10, fh: 98, fk: 2, bh: 28, bk: 100, spin: 4.9, kyf: 1.38, kyb: 0.5, twist: 0.5, axf: 1.0, axb: 0.3, headSpin: 0.5, grip: 0 }),
+  // fin du croissant : la jambe de frappe redescend, la jambe d'appel s'allonge pour la réception
+  cyFall: mkPose({ lean: 10, hd: -8, fs: 70, fe: 60, bs: 70, be: 70, fh: 55, fk: 40, bh: 20, bk: 35, spin: 5.05, kyf: 0.9, kyb: 0.6, twist: 0.2, axf: 0.6, axb: 0.4, headSpin: 0.3, grip: 0.4 }),
+  // réception en position du cavalier (mǎbù) face caméra : cuisses à l'horizontale ouvertes, tibias verticaux, garde
+  cyLand: mkPose({ lean: 8, hd: -6, fs: 10, fe: 15, bs: 95, be: 110, fh: 78, fk: 84, bh: 78, bk: 84, spin: 5.13, kyf: -1.15, kyb: 1.15, twist: 0.1, axf: 1.45, headSpin: 1.0, grip: 0 }),
   // ---- prises / projections ----
   grab: mkPose({ lean: 15, hd: -5, fs: 85, fe: 35, bs: 80, be: 40, fh: 30, fk: 30, bh: -25, bk: 15, grip: 0.6 }),
   liftOver: mkPose({ lean: -12, hd: -20, fs: 170, fe: 20, bs: 165, be: 25, fh: 15, fk: 25, bh: -15, bk: 20 }),

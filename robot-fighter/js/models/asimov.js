@@ -5,7 +5,7 @@
    Base : maillages OFFICIELS du dépôt menloresearch/asimov-1 (sim-model, js/meshes/asimov.js, normales transférées).
    Taille : le vrai robot mesure 1,2 m avec des proportions d'enfant (jambes ≈ 47 %, gros casque) ;
    la « version combat » mesure 1,85 m :
-   - haut du corps à KU ≈ 1,36 (réel → conception ; × ch.scale 0,96 = × 1,30 en jeu) : axes d'épaule réels
+   - haut du corps à KU ≈ 1,36 (réel → conception ; × ch.scale 1,02 = × 1,39 en jeu, même taille que le T800) : axes d'épaule réels
      calés sur les épaules du squelette ; tête, cou, buste et bassin gardent leurs proportions réelles ;
    - membres ALLONGÉS par étirement « en bande » le long de l'os (warp) : seules les zones droites (tube de
      cuisse, fût du tibia, haut du bras, avant-bras) s'allongent, les carters d'articulation restent ronds ;
@@ -20,7 +20,7 @@
 if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
   const T = RK.T, BGU = T.BufferGeometryUtils, PI = Math.PI, D = PI / 180;
   const GEO = {}, PREP = {}, SPL = {}, GC = {}, TX = {};
-  const SMOOTH = /hip_yaw|knee/;   // coques de cuisse / tibia : normales recalculées (les normales transférées y marquent les défauts de décimation)
+  const SMOOTH = /hip_yaw|knee|neck_pitch|elbow_link|shoulder_roll/;   // coques de cuisse / tibia : normales recalculées (les normales transférées y marquent les défauts de décimation)
   const b64 = s => { const bin = atob(s), n = bin.length, u = new Uint8Array(n); for (let i = 0; i < n; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
 
   /* ---------- décodage d'une géométrie réelle (non indexée, cm réels) ---------- */
@@ -182,22 +182,23 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
     const add = (parent, geo, mat, p, r, s) => ctx.add(parent, geo, mat, { p, r, s });
 
     /* ---------- matériaux ---------- */
-    const PA = ctx.mat(Object.assign({ color: ch.body, roughness: 0.54, metalness: 0.02, sheen: 0.8, sheenRoughness: 0.38, sheenColor: 0xa3aeb9,
-      envMapIntensity: 0.7, roughnessMap: nylonTex() }, SK.pa || {}));                                                  // PA12 MJF anthracite
+    const PA = ctx.mat(Object.assign({ color: ch.body, roughness: 0.58, metalness: 0.02, sheen: 0.55, sheenRoughness: 0.4, sheenColor: 0x8a97a3,
+      envMapIntensity: 0.62, roughnessMap: nylonTex() }, SK.pa || {}));                                                  // PA12 MJF anthracite
     const PA2 = ctx.mat(Object.assign({ color: ch.joint, roughness: 0.5, metalness: 0.05, sheen: 0.4, sheenRoughness: 0.45, sheenColor: 0x6d7680,
       envMapIntensity: 0.55, roughnessMap: nylonTex() }, SK.pa2 || {}));                                                 // PA12 plus sombre (cou, cadre de visière)
     const GOLD = ctx.mat(Object.assign({ color: ch.trim, roughness: 0.3, metalness: 1, envMapIntensity: 1.05, roughnessMap: brushTex() }, SK.gold || {})); // alu anodisé or
     const SCR = ctx.mat({ color: SK.screw || 0x17181b, roughness: 0.35, metalness: 0.9, envMapIntensity: 0.8 });       // vis à tête creuse
     const GLS = M.visor, RUB = M.rubber, CHR = M.chrome;
     const LED = ctx.glow(ch.accent, 3.4);
-    const EYE = ctx.glow(ch.accent, 1.25);
-    const VIS = ctx.mat({ color: 0x15181b, roughness: 0.34, metalness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.75 }); // écran fumé de la visière
+    const EYE = ctx.glow(ch.accent, 0.85);   // sous le seuil du bloom au repos (pas de halo doré sur l’écran), × 2,2 en spécial
+    const VIS = ctx.mat({ color: 0x05070a, roughness: 0.5, metalness: 0, specularIntensity: 0.22, envMapIntensity: 0.12 }); // écran fumé de la visière
 
     /* ---------- échelles ---------- */
     const HIP = [-5.2, 58.596, 0];
     const shR = B.right_shoulder_roll_link;
     const KU = 0.86 * L.to / (shR[1] - HIP[1]);           // ≈ 1,358 : épaules réelles → épaules du squelette
     const G = 1.08, GA = 1.1;                              // épaisseur des jambes / des bras (adulte)
+    const HS = 1.18;                                       // mains à l'échelle des avant-bras réels (× KU × GA)
     const NB = [HIP[0], HIP[1] + L.to / KU, 0], HB = [HIP[0], NB[1] + L.nk / KU, 0];
     const shZ = shR[2] * KU, HPZ = 11.4, hpZ = HPZ * KU;
     const realGroup = (o) => { const gr = new T.Group(); gr.matrixAutoUpdate = false; gr.matrix.copy(ctx.realMatrix(o)); return gr; };
@@ -270,7 +271,7 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
       if (!low && !DBG) {
         const hg = realGroup(HO); h.add(hg);
         // visière : bloc arrondi en relief + écran noir en retrait + filet lumineux
-        add(hg, plate(10.6, 6.2, 1.8, 2.0, 0.55), PA, [3.35, 117.0, 0], FY);
+        add(hg, plate(10.6, 6.2, 1.8, 2.0, 0.55), PA2, [3.35, 117.0, 0], FY);
         add(hg, plate(9.0, 4.6, 1.1, 0.3, 0.1), VIS, [4.28, 117.0, 0], FY);
         add(hg, g.box(0.1, 0.22, 5.6), EYE, [4.45, 117.25, 0]);
       }
@@ -282,22 +283,24 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
        ===================================================== */
     for (const [sd, s, z] of [['f', 'right', 1], ['b', 'left', -1]]) {
       const sh = B[s + '_shoulder_roll_link'], el = B[s + '_elbow_link'], wr = B[s + '_wrist_yaw_link'];
-      // épaule : plaque or (lien de tangage) fixée au buste
-      const SC_O = { pivot: sh, k: KU };
-      const sc = real(s + '_shoulder_pitch_link_visual', GOLD, SC_O);
+      // épaule : palier sombre fixé au buste ; la plaque or (lien de TANGAGE réel) tourne avec le bras (voir ua)
+      const sc = ctx.group();
       if (!low && !DBG) {
-        const sg = realGroup(SC_O); sc.add(sg);
-        const zz = [14.4, 16.4, 18.4].map(v => v * z);
-        add(sg, screws('shf' + z, [95.3, 97.9].flatMap(y => zz.map(q => [-3.42, y, q]))), SCR);
+        const sg = realGroup({ pivot: sh, k: KU }); sc.add(sg);
+        add(sg, g.ccyl(3.3, 1.6, 0.4, 24, 'z'), PA2, [sh[0], sh[1], z * 8.9]);
       }
       P[sd + 'sc'] = sc;
-      // bras : carter d'épaule rond + fût (étiré) + étrier de coude
+      // bras : plaque d'épaule or (tangage, 6 vis) + carter d'épaule rond + fût (étiré) + étrier de coude
       const UA_W = boneWarp(sh, el, L.ua / KU - (sh[1] - el[1]), 5.2, 12.2);
       const UA_O = { pivot: sh, to: UA_W.end, frame: 'limb', k: KU, s: [GA, 1, GA], w: UA_W };
+      const PT_O = { pivot: sh, to: UA_W.end, frame: 'limb', k: KU };
       const zc = sh[2];
       const clevis = { key: 'clv', cls: (x, y, zz) => (y < 80.6 && Math.abs(zz - zc) > 2.25) ? 'g' : 'p', mats: { p: PA, g: GOLD }, lowKey: 'p' };
-      const ua = ctx.group(real(s + '_shoulder_roll_link_visual', PA, UA_O), real(s + '_shoulder_yaw_link_visual', clevis, UA_O));
+      const ua = ctx.group(real(s + '_shoulder_pitch_link_visual', GOLD, PT_O), real(s + '_shoulder_roll_link_visual', PA, UA_O), real(s + '_shoulder_yaw_link_visual', clevis, UA_O));
       if (!low && !DBG) {
+        const pg = realGroup(PT_O); ua.add(pg);
+        const zz = [14.4, 16.4, 18.4].map(v => v * z);
+        add(pg, screws('shf' + z, [95.3, 97.9].flatMap(y => zz.map(q => [-3.42, y, q]))), SCR);
         const ag = realGroup(UA_O); ua.add(ag);
         const yr = wpt(UA_W, [0, 81.0, 0])[1];
         add(ag, g.torus(3.42, 0.24, 24, 4, 2 * PI, 'y'), GOLD, [sh[0], yr, zc]);
@@ -349,8 +352,8 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
        repère : origine = poignet, +X = prolongement de l'avant-bras, paume côté -Y, side = +1 ('f') / -1 ('b')
        ===================================================== */
     function hand(side) {
-      const root = ctx.group();
-      if (low) { add(root, g.cbox(11.5, 4.6, 7.6, 1.2), PA, [6.0, -0.4, 0]); root.userData.setCurl = () => {}; return root; }
+      const root0 = ctx.group(), root = ctx.group(); root.scale.setScalar(HS); root0.add(root);
+      if (low) { add(root, g.cbox(11.5, 4.6, 7.6, 1.2), PA, [6.0, -0.4, 0]); root0.userData.setCurl = () => {}; return root0; }
       const PX = 2.9, PL = 6.8, PW = 7.6, PT = 3.6;
       // poignet : flasque or + manchon sombre
       add(root, g.ccyl(2.9, 1.1, 0.3, 24, 'x'), GOLD, [0.6, 0, 0]);
@@ -390,14 +393,14 @@ if (typeof RK !== 'undefined' && RK) RK.models.asimov = (function () {
       add(t1, g.cbox(1.2, 0.42, 1.5, 0.12), RUB, [2.0, -0.85, 0]);
       root.add(t0);
       const XV = new T.Vector3(1, 0, 0), dOpen = new T.Vector3(0.8, -0.3, -side * 0.52).normalize(), dShut = new T.Vector3(0.84, -0.36, side * 0.42).normalize(), dv = new T.Vector3();
-      root.userData.setCurl = c => {
+      root0.userData.setCurl = c => {
         for (const sg of fingers) { sg[0].rotation.z = -(6 + 84 * c) * D; sg[1].rotation.z = -(8 + 94 * c) * D; sg[2].rotation.z = -(6 + 60 * c) * D; }
         dv.copy(dOpen).lerp(dShut, c).normalize();
         t0.quaternion.setFromUnitVectors(XV, dv);
         t1.rotation.z = -(6 + 20 * c) * D; t1.rotation.y = side * 18 * c * D;
       };
-      root.userData.setCurl(1);
-      return root;
+      root0.userData.setCurl(1);
+      return root0;
     }
 
     const tick = ctx.override ? undefined : (t, state) => {

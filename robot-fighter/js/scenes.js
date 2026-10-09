@@ -621,7 +621,7 @@ function moveRows(ch) {
 function moveRowsFull(ch) {
   return moveRows(ch).concat([
     [(ch.throwName || 'PROJECTION') + ' (prise)', '→ ou ← + HP au contact', ''],
-    ['CHASSÉ FRONTAL', '→ + LK', ''],
+    ['CHASSÉ LATÉRAL', '→ + LK', ''],
     ['COUP DE PIED RETOURNÉ', '→ + HK', ''],
     ['GENOU SAUTÉ', '→ + HP (à distance)', ''],
     ['FOUETTÉ / HIGH KICK / LOW KICK / BALAYAGE', 'LK / HK / ↓+LK / ↓+HK', '']

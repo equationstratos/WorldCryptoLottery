@@ -67,8 +67,11 @@
   const land = st({ ...relax, lean: 4, fs: 10, fe: 30, bs: 10, be: 34, grip: 0.45 }, lxS, lxS, hS, hS - 5); // pied au-dessus de sa place
   const gLand = st({ ...POSES.idle, lean: 6 }, F0, B0, H0, H0 - 14); // pied arrière au-dessus de sa place de garde
   const standD = st({ ...relax, lean: 4, fe: 26, be: 26 }, lxS, lxS, hS - 1.5);
-  const waveUp = st({ ...relax, lean: 0, hd: -8, headSpin: -0.45, fs: 98, fe: 92, axf: 0.22, grip: 0, bs: 4, be: 20 }, lxS, lxS, hS);
-  const wave = (fe, ax) => st({ ...relax, lean: 0, hd: -8, headSpin: -0.45, fs: 96, fe, axf: ax, grip: 0, bs: 4, be: 20 }, lxS, lxS, hS);
+  // le salut se fait avec le bras du fond (côté droit de l'écran) : la main reste à côté de la visière, jamais devant ;
+  // bras levé vers l'avant, avant-bras vertical, qui balance vers l'extérieur (abduction négative = vers l'extérieur
+  // quand l'avant-bras est levé)
+  const waveUp = st({ ...relax, lean: -1, hd: -8, headSpin: -0.42, fs: 8, fe: 22, axf: 0.14, bs: 100, be: 70, axb: -0.4, grip: 0 }, lxS, lxS, hS);
+  const wave = (be, ax, d = 0) => st({ ...relax, lean: 0, hd: -9, headSpin: -0.42, fs: 6, fe: 22, axf: 0.14, bs: 98, be, axb: ax, grip: 0 }, lxS, lxS, hS + d);
   const bowPre = st({ ...relax, lean: -2, hd: -4, fs: -2, fe: 12, bs: -2, be: 12, axf: 0.12, axb: 0.12, grip: 0.2 }, lxS, lxS, hS);
   const bow = st({ lean: 36, hd: 14, fs: -30, fe: 10, bs: -30, be: 10, axf: 0.12, axb: 0.12, grip: 0.2 }, lxS + 1, lxS + 1, hS + 0.4);
   const bowH = { ...bow, lean: 38, hd: 16 };
@@ -76,30 +79,32 @@
   const passB = st({ ...POSES.idle, lean: 5, fs: 45, fe: 95, bs: 25, be: 105, grip: 0.8 }, lxM, midB(BXg, BX1, Ym, dxM), H0 + 0.5, H0 - 13);
 
   // ======================= VICTOIRE : chef d'orchestre =======================
-  const Y2 = -1.12, dx2 = dxAt(XF, lxS, HZ, Y2), Ym2 = -0.75, dxM2 = dxAt(XF, lxM, HZ, Ym2);
-  const pod = o => st({ lean: 2, hd: -6, headSpin: -0.1, grip: 0.55, axb: 0.25, ...o }, lxS, lxS, hS);
-  const vReady = pod({ fs: 70, fe: 85, axf: 0.15, bs: 62, be: 80, grip: 0.5 }); // les deux mains levées : « attention… »
-  const vLift = pod({ lean: -2, hd: -10, fs: 98, fe: 62, axf: 0.12, bs: 88, be: 62 }); // levée (inspiration)
-  const b1 = pod({ lean: 5, hd: -2, fs: 34, fe: 34, axf: 0.06, bs: 50, be: 75 }); // 1 : en bas
-  const b2 = pod({ lean: 3, fs: 52, fe: 64, axf: -0.62, bs: 52, be: 78 }); // 2 : vers l'intérieur
-  const b3 = pod({ lean: 2, fs: 48, fe: 50, axf: 1.0, bs: 54, be: 80 }); // 3 : vers l'extérieur
-  const b4 = pod({ lean: 0, hd: -9, fs: 92, fe: 58, axf: 0.24, bs: 58, be: 82 }); // 4 : en haut
-  const c1 = pod({ lean: 7, hd: 0, fs: 30, fe: 30, axf: 0.05, bs: 70, be: 60, axb: 0.4, grip: 0.3 }); // crescendo : main gauche monte
-  const c2 = pod({ lean: 4, fs: 52, fe: 66, axf: -0.66, bs: 95, be: 50, axb: 0.55, grip: 0.3 });
-  const c3 = pod({ lean: 2, fs: 46, fe: 48, axf: 1.08, bs: 115, be: 42, axb: 0.7, grip: 0.2 });
-  const fermata = pod({ lean: -6, hd: -16, fs: 18, fe: 18, axf: 2.45, bs: 18, be: 18, axb: 2.45, grip: 0 }); // point d'orgue : bras en V
+  // 3/4 face : la baguette (bras avant) et la main gauche se lisent de profil, à droite de la visière
+  const Y2 = -0.64, dx2 = dxAt(XF, lxS, HZ, Y2), Ym2 = -0.53, dxM2 = dxAt(XF, lxM, HZ, Ym2);
+  const pod = (o, d = 0) => st({ lean: 2, hd: -6, headSpin: -0.25, grip: 0.55, axb: 0.25, ...o }, lxS, lxS, hS + d);
+  const vReady = pod({ fs: 74, fe: 78, axf: 0.15, bs: 66, be: 76, grip: 0.5 }); // les deux mains levées : « attention… »
+  const vLift = pod({ lean: -3, hd: -12, fs: 128, fe: 34, axf: 0.12, bs: 100, be: 50 }, 0.6); // levée (inspiration)
+  const b1 = pod({ lean: 7, hd: -2, fs: 30, fe: 28, axf: 0.06, bs: 52, be: 74 }, -2.2); // 1 : en bas (ictus, genoux qui plient)
+  const b2 = pod({ lean: 4, fs: 64, fe: 60, axf: -0.72, bs: 56, be: 76 }); // 2 : vers l'intérieur
+  const b3 = pod({ lean: 3, fs: 56, fe: 44, axf: 1.15, bs: 56, be: 78 }); // 3 : vers l'extérieur
+  const b4 = pod({ lean: -1, hd: -10, fs: 132, fe: 30, axf: 0.2, bs: 60, be: 80 }, 0.4); // 4 : en haut
+  const c1 = pod({ lean: 8, hd: -2, fs: 30, fe: 28, axf: 0.05, bs: 80, be: 60, axb: 0.4, grip: 0.3 }, -2.2); // crescendo : main gauche monte
+  const c2 = pod({ lean: 4, hd: -8, fs: 64, fe: 60, axf: -0.7, bs: 112, be: 42, axb: 0.5, grip: 0.3 });
+  const c3 = pod({ lean: 0, hd: -12, fs: 58, fe: 44, axf: 1.15, bs: 140, be: 28, axb: 0.55, grip: 0.2 }, 0.4);
+  const fermata = pod({ lean: -6, hd: -16, fs: 18, fe: 18, axf: 2.45, bs: 18, be: 18, axb: 2.45, grip: 0 }, 0.6); // point d'orgue : bras en V
   const fermata2 = { ...fermata, lean: -7, hd: -18, axf: 2.55, axb: 2.55 };
-  const cut = pod({ lean: 10, hd: 4, fs: 70, fe: 95, axf: -0.35, bs: 70, be: 95, axb: -0.35, grip: 1 }); // coupure : poings fermés devant
-  const cBow = st({ lean: 42, hd: 16, fs: 70, fe: 100, axf: -0.45, bs: -10, be: 20, axb: 0.9, grip: 0.4 }, lxS + 1, lxS + 1, hS + 0.4); // main sur le cœur
-  const cBowH = { ...cBow, lean: 44, hd: 18 };
+  const cut = pod({ lean: 10, hd: 4, fs: 70, fe: 80, axf: -0.3, bs: 70, be: 80, axb: -0.3, grip: 1 }, -2); // coupure : poings fermés devant
+  // salut du chef : main avant sur le cœur, bras du fond ouvert vers le côté
+  const cBow = st({ lean: 40, hd: 16, headSpin: -0.2, fs: 46, fe: 118, axf: -0.5, bs: -34, be: 12, axb: 0.16, grip: 0.4 }, lxS + 1, lxS + 1, hS + 0.4);
+  const cBowH = { ...cBow, lean: 43, hd: 18 };
   const cRise = pod({ lean: -2, hd: -8, fs: 20, fe: 30, axf: 0.6, bs: 20, be: 30, axb: 0.6, grip: 0.3 }); // bras ouverts au public
   // boucle : valse à 3 temps, douce
-  const w1 = pod({ lean: 4, hd: -3, fs: 40, fe: 40, axf: 0.1, bs: 40, be: 70, axb: 0.3 });
-  const w2 = pod({ lean: 2, hd: -5, fs: 50, fe: 52, axf: 0.95, bs: 46, be: 74, axb: 0.4 });
-  const w3 = pod({ lean: 0, hd: -9, fs: 88, fe: 58, axf: 0.3, bs: 52, be: 76, axb: 0.35 });
+  const w1 = pod({ lean: 5, hd: -3, fs: 36, fe: 36, axf: 0.1, bs: 44, be: 70, axb: 0.3 }, -1.5);
+  const w2 = pod({ lean: 2, hd: -5, fs: 54, fe: 50, axf: 1.0, bs: 50, be: 72, axb: 0.4 });
+  const w3 = pod({ lean: -1, hd: -10, fs: 118, fe: 40, axf: 0.3, bs: 56, be: 76, axb: 0.35 }, 0.4);
 
   const fx = {
-    hello: at(wave(96, 0.22), Y1, dx1, 0, 'f', twinkle),
+    hello: at(wave(80, -0.8, -1), Y1, dx1, 0, 'b', twinkle),
     n1: at(b1, Y2, dx2, 0, 'f', notes(2, 6)), n2: at(b2, Y2, dx2, 0, 'f', notes(1, 4)), n3: at(b3, Y2, dx2, 0, 'f', notes(2, 6)), n4: at(b4, Y2, dx2, 0, 'f', notes(1, 4)),
     m1: at(c1, Y2, dx2, 0, 'f', notes(2, 6)), m2: at(c2, Y2, dx2, 0, 'f', notes(2, 6)), m3: at(c3, Y2, dx2, 0, 'f', notes(3, 8)),
     w1: at(w1, Y2, dx2, 0, 'f', notes(1, 5)), w2: at(w2, Y2, dx2, 0, 'f', notes(1, 5)), w3: at(w3, Y2, dx2, 0, 'f', notes(1, 5)),
@@ -109,10 +114,11 @@
       FX.add({ type: 'ring', x: xs, y: footY - 95 * sc, size: 110 * sc, life: 22, max: 22, col: '#ffd23a', lw: 5, flat: 0.5 });
       AU.sfx('confirm');
     },
-    cutoff: (c, x, footY, sc, face) => {
-      const xs = x + face * (sc !== 1 ? dx2 : 0) * sc, y = footY - 92 * sc;
-      FX.add({ type: 'glow', x: xs + face * 12 * sc, y, size: 50 * sc, life: 14, max: 14, col: '#ffd23a', core: '#fff' });
-      for (let i = 0; i < 16; i++) { const a = rand(0, Math.PI * 2), v = rand(3, 8); FX.add({ type: 'star', x: xs + face * 12 * sc, y, vx: Math.cos(a) * v * sc, vy: Math.sin(a) * v * sc - 1, drag: 0.9, g: 0.05, size: rand(5, 9) * sc, life: rand(18, 30) | 0, max: 30, col: pick(['#ffd23a', '#fff3b0', '#ffffff']), rot: rand(0, 3) }); }
+    cutoff: (c, x, footY, sc, face) => { // éclat doré entre les deux poings fermés
+      const hf = hand(cut, Y2, 'f'), hb = hand(cut, Y2, 'b'), menu = sc !== 1;
+      const cx = x + face * ((menu ? dx2 : 0) + (hf.x + hb.x) / 2) * sc, y = footY - (hf.y + hb.y) / 2 * sc;
+      FX.add({ type: 'glow', x: cx, y, size: 24 * sc, life: 12, max: 12, col: '#ffd23a', core: '#fff' });
+      for (let i = 0; i < 16; i++) { const a = rand(0, Math.PI * 2), v = rand(3, 8); FX.add({ type: 'star', x: cx, y, vx: Math.cos(a) * v * sc, vy: Math.sin(a) * v * sc - 1, drag: 0.9, g: 0.05, size: rand(5, 9) * sc, life: rand(18, 30) | 0, max: 30, col: pick(['#ffd23a', '#fff3b0', '#ffffff']), rot: rand(0, 3) }); }
       AU.sfx('hitL');
     }
   };
@@ -126,11 +132,11 @@
       [stand, 5, { yaw: Y1, dx: dx1 }],                  // pieds joints, genoux fléchis (posture ASIMO)
       [standD, 5, { yaw: Y1, dx: dx1 }],
       [waveUp, 12, { yaw: Y1, dx: dx1, say: 'Hello!' }], // la main se lève
-      [wave(60, 0.18), 8, { yaw: Y1, dx: dx1, fx: 'hello' }],
-      [wave(112, 0.26), 8, { yaw: Y1, dx: dx1 }],
-      [wave(60, 0.18), 8, { yaw: Y1, dx: dx1 }],
-      [wave(108, 0.24), 8, { yaw: Y1, dx: dx1 }],
-      [wave(80, 0.2), 7, { yaw: Y1, dx: dx1 }],
+      [wave(80, -0.8, -1), 9, { yaw: Y1, dx: dx1, fx: 'hello' }], // l'avant-bras balance de part et d'autre de la verticale
+      [wave(74, -0.1, 0.3), 9, { yaw: Y1, dx: dx1 }],
+      [wave(80, -0.8, -1), 9, { yaw: Y1, dx: dx1 }],
+      [wave(74, -0.1, 0.3), 9, { yaw: Y1, dx: dx1 }],
+      [wave(78, -0.5, -0.4), 7, { yaw: Y1, dx: dx1 }],
       [bowPre, 12, { yaw: Y1, dx: dx1 }],                // bras le long du corps, se redresse
       [bow, 15, { yaw: Y1, dx: dx1 - 1 }],               // ojigi
       [bowH, 12, { yaw: Y1, dx: dx1 - 1 }],

@@ -27,13 +27,17 @@
   const handAt = (x, footY, sc, face, hx, hy, dx = 0) => ({ x: x + face * ((sc !== 1 ? dx : 0) + hx) * sc, y: footY - hy * sc });
 
   // ======================= INTRO : vérification des systèmes =======================
-  const YI = -0.78, BS = B0 + 22, DS = 85; // orientation 3/4 public, pied arrière rapproché, hanches hautes
+  // (démos Helix : le robot regarde ses deux mains, les referme cran par cran, relève la tête, garde)
+  const YI = -0.88, BS = B0 + 22, DS = 85; // orientation 3/4 public, pied arrière rapproché, hanches hautes
   const DXI = anchor(F0, YI);
   const uRelax = { lean: 2, hd: 0, fs: 8, fe: 20, bs: 8, be: 22, axf: 0.12, axb: 0.12, grip: 0.35 };
   const uGuard = { lean: POSES.idle.lean, hd: POSES.idle.hd, fs: 50, fe: 100, bs: 28, be: 118, grip: 1 };
-  const uHand = { ...uRelax, lean: -1, hd: 8, fs: 55, fe: 100, axf: 0.45, grip: 0, headSpin: 0.15 };
-  const hand = o => st({ ...uHand, ...o }, F0, BS, DS);
+  // les deux avant-bras levés devant le ventre, mains ouvertes, regard baissé sur elles
+  const uHands = { lean: 4, hd: 24, fs: 34, fe: 76, bs: 36, be: 74, axf: 0.2, axb: 0.2, grip: 0, headSpin: 0.06 };
+  const hands = o => st({ ...uHands, ...o }, F0, BS, DS);
   const hsCam = CAM - YI; // tête vers le public
+  const oI = { yaw: YI, dx: DXI };
+  const uDone = { ...uHands, grip: 1, fs: 38, fe: 86, bs: 36, be: 88, hd: -1, headSpin: hsCam };
   const intro = [
     ['idle', 4],
     // petit pas précis : le pied arrière se rapproche, le corps se redresse et se tourne de 3/4
@@ -41,39 +45,45 @@
       const e = ss(u), y = lerp(Y0, YI, e), lift = 9 * Math.sin(PI * clamp(u * 1.15, 0, 1));
       return [st(mixO(uGuard, uRelax, e), F0, lerp(B0, BS, ss(clamp(u * 1.15, 0, 1))), lerp(H0, DS, e), lerp(HB, DS, e) - lift), { yaw: y, dx: anchor(F0, y) }];
     }),
-    // la main ouverte monte devant le visage, le regard la suit
-    ...track(20, u => [hand(mixO(uRelax, uHand, ss(u))), { yaw: YI, dx: DXI }], { fx: 'scan' }),
-    [hand({ axf: 0.25, headSpin: 0.1, hd: 9 }), 12, { yaw: YI, dx: DXI }],
-    [hand({ axf: 0.5, headSpin: 0.18, hd: 7 }), 12, { yaw: YI, dx: DXI }],
-    // elle se referme en trois crans précis
-    [hand({ grip: 0.38 }), 5, { yaw: YI, dx: DXI, fx: 'tick1' }],
-    [hand({ grip: 0.38 }), 6, { yaw: YI, dx: DXI }],
-    [hand({ grip: 0.7 }), 5, { yaw: YI, dx: DXI, fx: 'tick2' }],
-    [hand({ grip: 0.7 }), 6, { yaw: YI, dx: DXI }],
-    [hand({ grip: 1, fe: 104 }), 5, { yaw: YI, dx: DXI, fx: 'fist' }],
-    [hand({ grip: 1, fe: 104 }), 10, { yaw: YI, dx: DXI }],
+    // les mains montent devant lui, paumes ouvertes, la tête se penche pour les regarder
+    ...track(18, u => [hands(mixO(uRelax, uHands, ss(u))), oI], { fx: 'scan' }),
+    // il les inspecte : la tête balaie de l'une à l'autre
+    ...track(16, u => [hands({ headSpin: 0.06 + 0.22 * Math.sin(PI * ss(u)), hd: 24 + 2 * Math.sin(PI * u) }), oI]),
+    // test des doigts : à moitié fermés, rouverts
+    [hands({ grip: 0.5 }), 6, oI],
+    [hands({ grip: 0 }), 7, oI],
+    // puis fermeture en trois crans précis
+    [hands({ grip: 0.38 }), 4, { ...oI, fx: 'tick1' }],
+    [hands({ grip: 0.38 }), 6, oI],
+    [hands({ grip: 0.7 }), 4, { ...oI, fx: 'tick2' }],
+    [hands({ grip: 0.7 }), 6, oI],
+    [hands({ grip: 1, fe: 82, be: 80 }), 4, { ...oI, fx: 'fist' }],
+    [hands({ grip: 1, fe: 82, be: 80, hd: 26 }), 9, oI],
     // regard vers le public, hochement de tête
-    [hand({ grip: 1, fs: 48, fe: 106, hd: 0, headSpin: hsCam }), 12, { yaw: YI, dx: DXI }],
-    [hand({ grip: 1, fs: 48, fe: 106, hd: 14, headSpin: hsCam }), 7, { yaw: YI, dx: DXI }],
-    [hand({ grip: 1, fs: 48, fe: 106, hd: -1, headSpin: hsCam }), 9, { yaw: YI, dx: DXI }],
-    // retour en garde : le pied arrière recule, le corps se remet de profil
+    [hands({ ...uDone, hd: 0 }), 12, oI],
+    [hands({ ...uDone, hd: 14 }), 7, oI],
+    [hands(uDone), 9, oI],
+    // retour en garde : le pied arrière recule, les poings montent, le corps se remet de profil
     ...track(20, u => {
       const e = ss(u), y = lerp(YI, Y0, e), lift = 9 * Math.sin(PI * clamp(u * 1.15, 0, 1));
-      const o = mixO({ ...uHand, grip: 1, fs: 48, fe: 106, hd: -1, headSpin: hsCam }, uGuard, e);
+      const o = mixO(uDone, uGuard, e);
       return [st(o, F0, lerp(BS, B0, ss(clamp(u * 1.15, 0, 1))), lerp(DS, H0, e), lerp(DS, HB, e) - lift), { yaw: y, dx: anchor(F0, y) }];
     }),
     ['idle', 14]
   ];
 
-  // ======================= VICTOIRE : révérence, mains dans le dos =======================
-  const YV = -1.2, FT = 1.5, DT = 87; // face au public, pieds joints sous les hanches, debout
+  // ======================= VICTOIRE : main sur le cœur, révérence, salut, mains jointes =======================
+  const YV = -0.85, FT = 1.5, DT = 87; // de trois quarts vers le public (la révérence reste lisible), pieds joints, debout
   const DXV = anchor(FT, YV);
   const uStand = { lean: 0, hd: 0, fs: 4, fe: 14, bs: 4, be: 14, axf: 0.12, axb: 0.12, grip: 0.3 };
   const uHeart = { ...uStand, fs: 38, fe: 122, axf: 1.1, grip: 0.08, hd: 6 };
-  const bowO = (k, o) => ({ ...uHeart, lean: 18 * k, hd: 6 + 12 * k, fs: 38 + 16 * k, fe: 122 - 4 * k, bs: 4 + 6 * k, ...o });
-  const uBehind = { lean: -1, hd: -3, fs: -18, fe: 22, bs: -18, be: 22, axf: -0.2, axb: -0.2, grip: 0.5 };
+  const bowO = (k, o) => ({ ...uHeart, lean: 34 * k, hd: 6 + 14 * k, fs: 38 + 14 * k, fe: 122 - 4 * k, bs: 4 + 6 * k, be: 14 + 4 * k, ...o });
+  // salut : la main ouverte à la tempe, puis relâchée d'un geste net vers le public
+  const uSalute = { ...uStand, fs: 95, fe: 135, axf: 0.9, grip: 0, hd: -2, headSpin: 0.06 };
+  const uFlick = { ...uStand, fs: 82, fe: 18, axf: 1.45, grip: 0, hd: -5, headSpin: -0.04 };
+  // mains jointes bas devant lui, posture de maître d'hôtel
+  const uClasp = { ...uStand, fs: 6, fe: 50, axf: -0.42, bs: 4, be: 52, axb: -0.4, grip: 0.45, hd: -2 };
   const hsV = CAM - YV;
-  const uWatch = { ...uBehind, fs: 40, fe: 95, axf: 0.9, grip: 0.4, hd: 26, headSpin: 0.22 };
   const up = o => st(o, FT, FT, DT);
   const opt = { yaw: YV, dx: DXV };
   const main = [
@@ -85,28 +95,36 @@
     }),
     // main sur le cœur…
     [up(uHeart), 14, opt],
-    // …légère révérence
+    // …révérence
     ...track(18, u => [up(bowO(ss(u))), opt], { say: 'Task complete.' }),
-    [up(bowO(1, { lean: 19, hd: 19 })), 12, opt],
-    ...track(16, u => [up(bowO(1 - ss(u), { hd: lerp(18, -2, ss(u)) })), opt]),
-    [up({ ...uHeart, hd: -3 }), 8, opt],
-    // mains dans le dos, menton haut
-    ...track(18, u => [up(mixO({ ...uHeart, hd: -3 }, uBehind, ss(u))), opt], { fx: 'poise' }),
-    [up(uBehind), 12, opt]
+    [up(bowO(1, { lean: 35, hd: 21 })), 12, opt],
+    ...track(16, u => [up(bowO(1 - ss(u), { hd: lerp(20, -2, ss(u)) })), opt]),
+    // salut à la tempe…
+    ...track(12, u => [up(mixO({ ...uHeart, hd: -2 }, uSalute, eOut(u))), opt]),
+    [up({ ...uSalute, fe: 138, hd: -3 }), 6, opt],
+    // …relâché d'un coup sec
+    ...track(8, u => [up(mixO({ ...uSalute, fe: 138, hd: -3 }, uFlick, eOut(u))), opt], { fx: 'flick' }),
+    [up({ ...uFlick, fe: 14, axf: 1.5 }), 10, opt],
+    // les mains se rejoignent devant la ceinture
+    ...track(20, u => [up(mixO({ ...uFlick, fe: 14, axf: 1.5 }, uClasp, ss(u))), opt]),
+    [up(uClasp), 12, opt]
   ];
   const loop = [
-    [up({ ...uBehind, lean: 0, hd: -2 }), 34, opt],
-    // coup d'œil au poignet
-    ...track(16, u => [up(mixO(uBehind, uWatch, ss(u))), opt]),
-    [up({ ...uWatch, hd: 28 }), 10, { ...opt, fx: 'glint' }],
-    [up({ ...uWatch, hd: 27, headSpin: 0.2 }), 14, opt],
-    // relève la tête vers le public, petit hochement satisfait
-    [up({ ...uWatch, fs: 34, fe: 98, hd: 0, headSpin: hsV }), 12, opt],
-    [up({ ...uWatch, fs: 34, fe: 98, hd: 12, headSpin: hsV }), 6, opt],
-    [up({ ...uWatch, fs: 34, fe: 98, hd: -2, headSpin: hsV }), 8, opt],
-    // la main repart dans le dos, regard droit devant
-    ...track(18, u => [up(mixO({ ...uWatch, fs: 34, fe: 98, hd: -2, headSpin: hsV }, uBehind, ss(u))), opt]),
-    [up(uBehind), 24, opt] // = dernière clé de main
+    // respiration calme, mains jointes
+    ...track(36, u => [up({ ...uClasp, lean: 1.2 * Math.sin(PI * u), hd: -2 + 1.5 * Math.sin(PI * u) }), opt]),
+    // regard vers le public, petit hochement satisfait
+    [up({ ...uClasp, hd: 0, headSpin: hsV }), 14, opt],
+    [up({ ...uClasp, hd: 12, headSpin: hsV }), 7, { ...opt, fx: 'tick1' }],
+    [up({ ...uClasp, hd: -2, headSpin: hsV }), 9, opt],
+    [up({ ...uClasp, hd: -2, headSpin: hsV * 0.9 }), 18, opt],
+    ...track(14, u => [up(mixO({ ...uClasp, hd: -2, headSpin: hsV * 0.9 }, uClasp, ss(u))), opt]),
+    // et de nouveau le salut, relâché d'un coup sec
+    ...track(12, u => [up(mixO(uClasp, uSalute, eOut(u))), opt]),
+    [up({ ...uSalute, fe: 138, hd: -3 }), 6, opt],
+    ...track(8, u => [up(mixO({ ...uSalute, fe: 138, hd: -3 }, uFlick, eOut(u))), opt], { fx: 'flick' }),
+    [up({ ...uFlick, fe: 14, axf: 1.5 }), 10, opt],
+    ...track(20, u => [up(mixO({ ...uFlick, fe: 14, axf: 1.5 }, uClasp, ss(u))), opt]),
+    [up(uClasp), 12, opt] // = dernière clé de main
   ];
 
   MOTIONS.figure = {
@@ -121,16 +139,15 @@
       tick2(ch, x, footY, sc, face) { tick(1800); },
       fist(ch, x, footY, sc, face) {
         tick(2200, 0.07); AU.sfx('block');
-        const h = handAt(x, footY, sc, face, 22, 160, DXI);
+        const h = handAt(x, footY, sc, face, 30, 128, DXI);
         FX.add({ type: 'glow', x: h.x, y: h.y, size: 16 * sc, life: 18, max: 18, col: ch.accent, core: '#fff' });
         FX.add({ type: 'ring', x: h.x, y: h.y, size: 22 * sc, life: 14, max: 14, col: ch.proj.color, lw: 2 });
       },
-      poise(ch, x, footY, sc, face) { AU.tone(660, 0.18, 'sine', 0.04, 990); },
-      // reflet sur le poignet
-      glint(ch, x, footY, sc, face) {
-        AU.tone(2400, 0.12, 'sine', 0.04);
-        const h = handAt(x, footY, sc, face, -2, 128, DXV);
-        FX.add({ type: 'star', x: h.x, y: h.y, size: 9 * sc, life: 16, max: 16, col: '#e8f4ff', rot: 0.4 });
+      // le salut relâché : petit éclat au bout des doigts
+      flick(ch, x, footY, sc, face) {
+        AU.tone(1800, 0.08, 'sine', 0.05, 2600); AU.sfx('whiff');
+        const h = handAt(x, footY, sc, face, 46, 150, DXV);
+        FX.add({ type: 'star', x: h.x, y: h.y, size: 10 * sc, life: 16, max: 16, col: '#e8f4ff', rot: 0.4 });
       }
     }
   };

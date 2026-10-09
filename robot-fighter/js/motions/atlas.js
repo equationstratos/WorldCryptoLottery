@@ -85,7 +85,7 @@
   
   const R = -360; // après le salto, le corps a fait un tour complet (rot -360 ≡ 0)
   const uLand = { lean: 30, hd: -10, fs: 78, fe: 30, bs: 70, be: 34, grip: 0.7, rot: R };
-  const open = st({ lean: 14, hd: -10, fs: 110, fe: 30, bs: 100, be: 34, grip: 0.7, rot: R }, FL, BL, 80);
+  const uOpen = { lean: 14, hd: -10, fs: 110, fe: 30, bs: 100, be: 34, grip: 0.7, rot: R }, open = st(uOpen, FL, BL, 80);
   const uAbs = { lean: 20, hd: -4, fs: 58, fe: 55, bs: 48, be: 60, grip: 0.85, rot: R };
   const hsV = look(0, YV);
   const uVee = { lean: -3, hd: -8, fs: 6, fe: 8, bs: 6, be: 8, axf: 2.6, axb: 2.6, grip: 1, headSpin: hsV, rot: R };
@@ -94,7 +94,11 @@
   const DV = 83; // debout (limité par le pied arrière)
   const vee = o => st(o, FL, BL, DV, DV);
 
-  const H = 92; // hauteur du salto (hanches)
+  const H = 40; // hauteur du salto : flèche de la parabole du centre du buste
+  // hauteur du centre du buste (pivot de rot) au-dessus du point le plus bas d'une pose
+  const cH = p => { const S = skeleton(ch, p, 1); return S._low + Math.cos(p.lean * D2R) * 60 * s * 0.45; };
+  const pushEnd = (() => { const p = st(uPush, FL, BL, LMAX); p.rot = -22; return p; })();
+  const HC0 = cH(pushEnd) + 16, HC1 = cH(open);
   const main = [
     ['idle', 4],
     // le pied arrière se rapproche d'un petit pas pendant que le corps se charge, bras lancés en arrière
@@ -103,16 +107,17 @@
     // impulsion : jambes qui se tendent, bras lancés vers le haut, le corps commence à basculer
     ...track(6, u => { const e = eIn(u); const p = st(mixO(uLoad, uPush, e), FL, BL, lerp(52, LMAX, e)); p.rot = -22 * e; return [p, { dy: 16 * e, dx: DXF * 0.1 * e }]; }, { fx: 'leap' }),
     // vol : rotation régulière (le tour est bouclé avant de toucher le sol), trajectoire balistique, groupé puis jambes tendues vers le sol
+    // le centre du buste (pivot de rot) suit une parabole : dy (hauteur du point le plus bas) en est déduit
     ...track(34, u => {
-      const p = u < 0.3 ? lerpPose(st(uPush, FL, BL, LMAX), tuck, ss(u / 0.3)) : u < 0.66 ? mkPose(tuck) : lerpPose(tuck, open, ss((u - 0.66) / 0.3));
+      const p = u < 0.24 ? lerpPose(st(uPush, FL, BL, LMAX), tuck, ss(u / 0.24)) : u < 0.66 ? mkPose(tuck) : lerpPose(tuck, open, ss(clamp((u - 0.66) / 0.3, 0, 1)));
       const v = clamp(u / 0.9, 0, 1);
       p.rot = lerp(-22, R, 0.75 * v + 0.25 * ss(v));
-      const dy = 16 + (H - 16) * 4 * u * (1 - u) * 1.02 - 12 * u; // départ 16, sommet ≈ 86, arrivée ≈ 4
-      return [p, { dy, dx: DXF * (0.1 + 0.85 * u) }];
+      const hc = lerp(HC0, HC1, u) + 4 * H * u * (1 - u);
+      return [p, { dy: Math.max(0, hc - cH(p)), dx: DXF * (0.1 + 0.9 * u) }];
     }),
     // réception : les pieds se posent, les genoux amortissent
-    ...track(6, u => [lerpPose(open, st(uLand, FL, BL, 54), eOut(u)), { dy: 0, dx: DXF * (0.95 + 0.05 * u) }], { fx: 'land' }),
-    [st(uAbs, FL, BL, 60), 10, { dx: DXF }],
+    ...track(6, u => [st(mixO(uOpen, uLand, eOut(u)), FL, BL, lerp(80, 54, eOut(u))), { dy: 0, dx: DXF }], { fx: 'land' }),
+    [st(uAbs, FL, BL, 60), 7, { dx: DXF }],
     // il se redresse en pivotant face au public (pied avant planté), bras en V
     ...track(18, u => {
       const e = ss(u), y = lerp(Y0, YV, e), lift = 6 * Math.sin(PI * u);
