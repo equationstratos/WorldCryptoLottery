@@ -30,6 +30,14 @@ const NORMALS = {
   // coup de pied tornade (360° en l'air)
   jhk: { pose: 'jhkT', base: 'jump', st: 6, ac: 20, rc: 0, dmg: 90, hs: 22, bs: 14, limb: 'ffo', r: 22, kb: 6, lvl: 2, h: 'high', name: 'TORNADE',
     keys: [[0, 'jump'], [6, 'jhkT', { spin: 6.28 + 1.75 }], [26, 'jhkT', { spin: 6.28 + 1.75 }]] },
+  // coude retourné d'Atlas (LP, LP, HP rapides) : jambes plantées, le buste fouette un tour complet (moteurs 360°),
+  // le coude arrière arrive à hauteur de tête
+  atElbow: { pose: 'hp', st: 9, ac: 5, rc: 16, dmg: 120, hs: 24, bs: 16, limb: 'bel', r: 24, kb: 14, lvl: 3, kd: true, launch: -6, name: 'COUDE RETOURNÉ',
+    keys: [[0, 'idle'], [5, { ...POSES.idle, lean: 12, twist: 0.7, headSpin: -0.35, fs: 70, fe: 110, bs: 60, be: 140 }],
+      [9, { ...POSES.idle, lean: 4, hd: -4, fs: 40, fe: 120, bs: 95, be: 155, twist: -3.6, headSpin: -3.1 }],
+      [12, { ...POSES.idle, lean: 4, hd: -4, fs: 40, fe: 120, bs: 95, be: 155, twist: -6.0, headSpin: -6.0 }],
+      [16, { ...POSES.idle, lean: 6, hd: -4, fs: 40, fe: 120, bs: 95, be: 155, twist: -6.283, headSpin: -6.283 }],
+      [30, { ...POSES.idle, twist: -6.283, headSpin: -6.283 }]] },
   // ---- coups de commande (avant + bouton) ----
   // chassé latéral (savate / yoko-geri) : hanches tournées à 90°, talon poussé dans l'axe, repousse l'adversaire
   flk: { pose: 'teep', st: 7, ac: 4, rc: 14, dmg: 55, hs: 16, bs: 10, limb: 'ffo', r: 20, kb: 18, lvl: 2, name: 'CHASSÉ LATÉRAL',
@@ -62,10 +70,14 @@ function keyPose(keys, t, leg) {
 }
 // jambe de frappe d'un coup ('f' | 'b') si sa hitbox est un pied, sinon ''
 const kickLeg = m => (m && m.limb && m.limb.endsWith('fo') ? m.limb[0] : '');
+// images-clés du cyclone kick (poses cy* de robots.js) ; la réception est gérée à part (cyLand → garde)
+const CYCLONE_KEYS = [[0, 'idle'], [8, 'cyWind'], [13, 'cyLift'], [18, 'cyCres1'], [24, 'cyAir'], [29, 'cyKick'], [33, 'cyKick'], [39, 'cyFall']];
 const SPECIAL_MV = {
   proj: { dmg: 90, hs: 22, bs: 16, kb: 8, lvl: 3, chip: true },
   uppercut: { limb: 'fha', r: 26, dmg: 70, hs: 25, bs: 16, kb: 4, lvl: 3, kd: true, launch: -10, hits: 2, every: 8, chip: true },
   flip: { limb: 'ffo', r: 28, dmg: 70, hs: 25, bs: 16, kb: 4, lvl: 3, kd: true, launch: -10, hits: 2, every: 8, chip: true },
+  // cyclone kick du T800 (xuanfeng jiao) : croissant de la jambe arrière à l'appel, puis frappe en l'air après un tour complet
+  cyclone: { limb: 'ffo', r: 30, dmg: 60, hs: 24, bs: 14, kb: 7, lvl: 3, kd: true, launch: -8, hits: 2, every: 12, chip: true },
   spin: { limb: 'ffo', r: 26, dmg: 42, hs: 18, bs: 12, kb: 5, lvl: 2, hits: 3, every: 10, chip: true },
   rush: { limb: 'fha', r: 26, dmg: 110, hs: 25, bs: 16, kb: 12, lvl: 3, kd: true, launch: -7, chip: true },
   beam: { dmg: 30, hs: 30, bs: 12, kb: 2, lvl: 4, chip: true, sup: true },
@@ -260,19 +272,28 @@ class Fighter {
     }
     return false;
   }
+  // LP, LP puis HP en moins de 42 images (le HP est récent et pas encore utilisé) → coude retourné (robots backElbow)
+  elbowChain(now) {
+    const P = this.presses, n = P ? P.length : 0; if (!this.ch.backElbow || n < 3) return false;
+    const [a, b, c] = P.slice(-3);
+    if (a.b !== 'lp' || b.b !== 'lp' || c.b !== 'hp' || now - c.t > 8 || c.t - a.t > 42 || c.t === this.elbowT) return false;
+    this.elbowT = c.t; return true;
+  }
+  startElbow(F) { this.buf.length = 0; this.startNormal('atElbow'); F.announceMove && F.announceMove(this, NORMALS.atElbow.name); }
   takeBuf(now) { while (this.buf.length && now - this.buf[0].t > 8) this.buf.shift(); return this.buf.length ? this.buf.pop() : null; }
 
   // ----- décisions d'attaque -----
   tryAttack(F, o, specialOnly = false) {
     const b = this.takeBuf(F.frame); if (!b) return false;
     const btn = b.b, now = F.frame, ch = this.ch;
+    if (btn === 'hp' && !specialOnly && this.elbowChain(now)) { this.startElbow(F); return true; }
     const P = btn === 'lp' || btn === 'hp', K = btn === 'lk' || btn === 'hk';
     const str = (btn === 'hp' || btn === 'hk' || btn === 'sp1' || btn === 'sp2') ? 'h' : 'l';
     if ((btn === 'su' || ((P || K) && this.motion(MOT.SUP, 45, now))) && this.meter >= 100) { F.startSuper(this); return true; }
     if (btn === 'su') return false;
     const mv = ch.move;
     const dpOk = (mv === 'uppercut' && P) || (mv === 'flip' && K);
-    const qcbOk = (mv === 'rush' && P) || (mv === 'spin' && K);
+    const qcbOk = (mv === 'rush' && P) || ((mv === 'spin' || mv === 'cyclone') && K);
     if (btn === 'sp2' || (dpOk && this.motion(MOT.DP, 18, now)) || (qcbOk && this.motion(MOT.QCB, 16, now))) { this.startSpecial(mv, str, F); return true; }
     if ((btn === 'sp1' || (P && this.motion(MOT.QCF, 16, now))) && !this.proj) { this.startSpecial('proj', str, F); return true; }
     if (specialOnly || btn === 'sp1') return false;
@@ -299,6 +320,7 @@ class Fighter {
     this.setSt('special'); this.sp = type; this.str = str; this.hitN = 0; this.hitCD = 0; this.connected = false;
     this.mv = SPECIAL_MV[type]; this.vx = 0; this.hover = false;
     if (type === 'uppercut' || type === 'flip') this.inv = 10;
+    if (type === 'cyclone') { this.cyLandT = -1; F && F.announceMove && F.announceMove(this, this.ch.moveName || 'CYCLONE KICK'); }
   }
   // ----- mise à jour par frame -----
   update(pad, o, F, controllable) {
@@ -309,7 +331,7 @@ class Fighter {
     const dir = controllable ? this.readDir(pad) : 5;
     if (dir !== this.dirN) { this.hist.push({ d: dir, t: F.frame }); if (this.hist.length > 30) this.hist.shift(); }
     this.dirN = dir;
-    if (controllable && pad) for (const b of ['lp', 'hp', 'lk', 'hk', 'sp1', 'sp2', 'su']) if (pad.pressed[b]) this.buf.push({ b, t: F.frame });
+    if (controllable && pad) for (const b of ['lp', 'hp', 'lk', 'hk', 'sp1', 'sp2', 'su']) if (pad.pressed[b]) { this.buf.push({ b, t: F.frame }); (this.presses || (this.presses = [])).push({ b, t: F.frame }); if (this.presses.length > 6) this.presses.shift(); }
     this.dispHp += (this.hp - this.dispHp) * (this.dispHp > this.hp ? 0.04 : 1);
     if (Math.abs(this.dispHp - this.hp) < 1) this.dispHp = this.hp;
 
@@ -348,6 +370,7 @@ class Fighter {
         if (m.hop && this.t === m.hop.at) { this.vx = m.hop.vx * this.face; this.vy = m.hop.vy; AU.sfx('jump'); }
         if (m.hop && !this.air && this.t > m.hop.at + 3) this.vx *= 0.6;
         if (this.t === m.st) AU.sfx(m.lvl > 1 ? 'whiffH' : 'whiff');
+        if (m === NORMALS.lp && controllable && this.t >= m.st && this.elbowChain(F.frame)) { this.startElbow(F); break; }
         if (m.cancel && this.connected && controllable && this.t < tot - 1) { if (this.tryAttack(F, o, true)) break; }
         if (this.t >= tot) { this.setSt(m.base === 'crouch' && dir <= 3 ? 'crouch' : 'idle'); this.mv = null; }
         break;
@@ -451,6 +474,30 @@ class Fighter {
         if (t === 44) { this.hover = false; this.vx = f * 1.5; }
         if (t > 46 && !this.air) { this.ghostOn = false; this.vx = 0; this.landRec = 12; this.setSt('land'); }
         break;
+      case 'cyclone': {
+        if (this.cyLandT >= 0) { // réception en cavalier puis retour en garde
+          if (++this.cyLandT >= 16) { this.ghostOn = false; this.setSt('idle'); }
+          break;
+        }
+        if (t === 4) { this.vx = f * 2; AU.sfx('whiff'); }
+        if (t === 10) { this.vy = h ? -11.5 : -10; this.vx = f * (h ? 4.4 : 3.4); AU.sfx('upper'); dust(this.x, GROUND, 10); }
+        if (t >= 10) {
+          this.ghostOn = true;
+          const p = this.wp(t < 21 ? 'bfo' : 'ffo');
+          // tourbillon : anneaux d'air autour du corps et traînée du pied
+          if (t % 4 === 0 && this.air) FX.add({ type: 'ring', x: this.x, y: this.hipY - 20 + rand(-25, 25), size: 60 + rand(0, 20), life: 8, max: 8, col: ch.accent, flat: 0.2, lw: 2 });
+          if (t % 2 === 0) FX.add({ type: 'glow', x: p.x + rand(-4, 4), y: p.y + rand(-4, 4), size: rand(8, 13), life: 9, max: 9, col: ch.accent, core: '#fff' });
+          if (t === 12 || t === 24) AU.sfx('spin');
+          if (t === 28) { // la main claque la plante du pied au sommet
+            AU.sfx('hitL');
+            for (let i = 0; i < 14; i++) FX.add({ type: 'spark', x: p.x, y: p.y, vx: rand(-7, 7), vy: rand(-7, 5), size: 2.5, life: 12, max: 12, col: i % 2 ? '#fff' : ch.accent, len: 3 });
+            FX.add({ type: 'ring', x: p.x, y: p.y, size: 46, life: 10, max: 10, col: '#fff', lw: 3 });
+          }
+          if (t > 20 && !this.air) { this.vx = 0; this.cyLandT = 0; dust(this.x, GROUND, 12); AU.sfx('land'); F.shake = Math.max(F.shake, 4); }
+        }
+        if (t > 90) this.setSt('idle');
+        break;
+      }
       case 'rush':
         if (t === 9) { this.vx = f * (h ? 15 : 12.5); AU.sfx('rush'); dust(this.x, GROUND, 6); }
         if (t >= 9 && t < 27) {
@@ -695,6 +742,15 @@ class Fighter {
         const r = -clamp((t - 4) * 16, 0, 360);
         return { ...POSES.flip, rot: r };
       }
+      case 'cyclone': {
+        if (this.cyLandT >= 0) { // cyLand (cavalier, spin 5.13) → garde après le tour complet (spin 2π)
+          const k = clamp(this.cyLandT / 16, 0, 1), from = keyPose(CYCLONE_KEYS, 99, 'f');
+          const land = this.cyLandT < 6 ? lerpPose(from, POSES.cyLand, this.cyLandT / 6) : lerpPose(POSES.cyLand, { ...POSES.idle, spin: Math.PI * 2 }, easeOut((this.cyLandT - 6) / 10));
+          land.sx = Math.cos((land.spin || 0) + (land.kyf || 0) * (1 - k));
+          return land;
+        }
+        return keyPose(CYCLONE_KEYS, t, t < 21 ? 'b' : 'f');
+      }
       case 'spin': {
         if (t < 6) return lerpPose(POSES.idle, POSES.jump, t / 6);
         if (t < 44) return { ...POSES.spin, sx: Math.cos((t - 6) * 0.55), spin: (t - 6) * 0.55 };
@@ -756,6 +812,7 @@ class Fighter {
       m = this.mv; const t = this.t;
       if (this.sp === 'uppercut' || this.sp === 'flip') active = t >= 4 && t < 22;
       else if (this.sp === 'spin') active = t > 6 && t < 44;
+      else if (this.sp === 'cyclone') active = this.cyLandT < 0 && ((t >= 13 && t < 19) || (t >= 25 && t < 33));
       else if (this.sp === 'rush') active = t >= 9 && t < 27;
     } else if (this.st === 'super') {
       const t = this.t;
@@ -766,7 +823,7 @@ class Fighter {
     if (!m || !active || !m.limb) return null;
     const maxHits = m.hits || 1;
     if (this.hitN >= maxHits || this.hitCD > 0) return null;
-    const limbK = this.st === 'super' && this.sp === 'storm' && (this.ch.move === 'flip' || this.ch.kicker) ? 'ffo' : m.limb;
+    const limbK = this.st === 'super' && this.sp === 'storm' && (this.ch.move === 'flip' || this.ch.kicker) ? 'ffo' : this.st === 'special' && this.sp === 'cyclone' && this.t < 21 ? 'bfo' : m.limb;
     const p = this.wp(limbK);
     return { x: p.x, y: p.y, r: m.r * this.ch.scale, mv: m };
   }
@@ -836,7 +893,7 @@ class AI {
       else if (R < 0.08) { this.hold = { u: true, [toward]: true }; this.cool = 6; }
       else { this.hold = { [toward]: true }; this.cool = 10 + ((Math.random() * 20) | 0); }
     } else if (dist > 130) {
-      if (R < 0.05 && (me.ch.move === 'rush' || me.ch.move === 'spin')) { press('sp2'); this.cool = 25; }
+      if (R < 0.05 && (me.ch.move === 'rush' || me.ch.move === 'spin' || me.ch.move === 'cyclone')) { press('sp2'); this.cool = 25; }
       else if (R < 0.065 && dist < 190) { this.hold = { [toward]: true }; pad.held[toward] = true; press('hp'); this.cool = 22; } // genou sauté
       else if (R < 0.08 && !me.proj) { press('sp1'); this.cool = 18; }
       else if (R < 0.12) { this.hold = { u: true, [toward]: true }; this.cool = 8; }

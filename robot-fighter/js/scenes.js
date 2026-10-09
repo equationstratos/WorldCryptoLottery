@@ -625,7 +625,7 @@ function moveRowsFull(ch) {
     ['COUP DE PIED RETOURNÉ', '→ + HK', ''],
     ['GENOU SAUTÉ', '→ + HP (à distance)', ''],
     ['FOUETTÉ / HIGH KICK / LOW KICK / BALAYAGE', 'LK / HK / ↓+LK / ↓+HK', '']
-  ]);
+  ]).concat(ch.backElbow ? [['COUDE RETOURNÉ', 'LP, LP, HP (rapide)', '']] : []);
 }
 function drawMoveList(c, ch1, ch2) {
   const list = ch2 ? [ch1, ch2] : [ch1];
@@ -635,8 +635,9 @@ function drawMoveList(c, ch1, ch2) {
     c.drawImage(portrait(ch, 56), x0 + 12, 66);
     txt(ch.name, x0 + 80, 84, 16, { align: 'left', color: ch.accent });
     txt(ch.maker, x0 + 80, 108, 10, { align: 'left', color: '#aaa' });
-    moveRowsFull(ch).forEach((r, j) => {
-      const y = 146 + j * 40;
+    const rows = moveRowsFull(ch), dy = Math.min(40, 300 / Math.max(1, rows.length - 1));
+    rows.forEach((r, j) => {
+      const y = 146 + j * dy;
       txt(r[0], x0 + 16, y, 10, { align: 'left', color: j < 3 ? '#ffd23a' : '#9be7ff' });
       txt(r[1], x0 + 16, y + 17, 13, { align: 'left', color: '#fff', font: FONT_BIG });
       if (r[2]) txt('ou ' + r[2], x0 + w - 16, y + 17, 9, { align: 'right', color: '#9be7ff' });
@@ -757,6 +758,8 @@ const PUPPET_SEQ = {
   special: [['projWind', 14, { fx: 'charge' }], ['proj', 6, { fx: 'fire' }], ['proj', 24], ['idle', 14]],
   uppercut: [['crouch', 8, { fx: 'charge' }], ['upper', 9, { dy: 70, fx: 'rise' }], ['upper', 9, { dy: 80 }], ['jump', 10, { dy: 25 }], ['crouch', 6], ['idle', 10]],
   flip: [['crouch', 8, { fx: 'charge' }], [{ ...POSES.flip, rot: -170 }, 9, { dy: 70, fx: 'rise' }], [{ ...POSES.flip, rot: -350 }, 9, { dy: 55 }], ['crouch', 8], ['idle', 10]],
+  cyclone: [['cyWind', 10, { fx: 'charge' }], ['cyLift', 5, { dy: 22, fx: 'rise' }], ['cyCres1', 5, { dy: 48 }], ['cyAir', 6, { dy: 72 }], ['cyKick', 5, { dy: 78, fx: 'whiffH' }], ['cyKick', 4, { dy: 74 }],
+    ['cyFall', 6, { dy: 36 }], ['cyLand', 6, { dy: 0 }], ['cyLand', 8], [{ ...POSES.idle, spin: Math.PI * 2 }, 14]],
   spin: [['jump', 8, { dy: 30, fx: 'charge' }], ['spin', 6, { dy: 45, spin: 0, fx: 'rise' }], ['spin', 30, { dy: 45, spin: Math.PI * 6 }], ['jump', 6, { dy: 15 }], ['idle', 10]],
   rush: [['rushWind', 10, { fx: 'charge' }], ['rush', 7, { dx: 55, fx: 'rise' }], ['rush', 8, { dx: 65 }], ['idle', 16, { dx: 0 }]],
   taunt: [['taunt', 14], ['win2', 12], ['taunt', 12], ['idle', 14]],
